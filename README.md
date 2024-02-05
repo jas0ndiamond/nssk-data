@@ -15,3 +15,8 @@ Install datastream-py
 
 `venv/bin/python -m pip install git+https://github.com/datastreamapp/datastream-py`
 
+Obtain DOI for your datasets
+
+Obtain API Key from the datastreamapp project (https://github.com/datastreamapp/api-docs)
+
+Follow examples from the datastreamapp project.
