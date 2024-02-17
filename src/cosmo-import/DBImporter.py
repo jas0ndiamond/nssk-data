@@ -4,47 +4,7 @@ from datetime import datetime
 import json
 import logging
 
-# DatasetName
-# MonitoringLocationID
-# MonitoringLocationName
-# MonitoringLocationLatitude
-# MonitoringLocationLongitude
-# MonitoringLocationHorizontalCoordinateReferenceSystem
-# MonitoringLocationHorizontalAccuracyMeasure
-# MonitoringLocationHorizontalAccuracyUnit
-# MonitoringLocationVerticalMeasure
-# MonitoringLocationVerticalUnit
-# MonitoringLocationType
-# ActivityType
-# ActivityMediaName
-# ActivityStartDate
-# ActivityStartTime
-# ActivityEndDate
-# ActivityEndTime
-# ActivityDepthHeightMeasure
-# ActivityDepthHeightUnit
-# SampleCollectionEquipmentName
-# CharacteristicName
-# MethodSpeciation
-# ResultSampleFraction
-# ResultValue
-# ResultUnit
-# ResultValueType
-# ResultDetectionCondition
-# ResultDetectionQuantitationLimitMeasure
-# ResultDetectionQuantitationLimitUnit
-# ResultDetectionQuantitationLimitType
-# ResultStatusID
-# ResultComment
-# ResultAnalyticalMethodID
-# ResultAnalyticalMethodContext
-# ResultAnalyticalMethodName
-# AnalysisStartDate
-# AnalysisStartTime
-# AnalysisStartTimeZone
-# LaboratoryName
-# LaboratorySampleID
-
+# TODO: accept this array as a parameter
 # Order of fields matters
 cosmo_schema = [
     "DatasetName",
@@ -105,11 +65,30 @@ class DBImporter:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
 
+        # store the file name, read it when we're ready for the db inserts
         self.db_config_file = db_config_file
+
+        self.importer_name = "DEFAULT"
+
+        self.schema = None
 
         self.inserts = []
 
+    def set_importer_name(self, new_name):
+        self.importer_name = new_name
+
+    # set the schema to expect for the data, and to inform construction of inserts.
+    # schema should be an ordered array of fields.
+    # must be defined before invocations of add
+    def set_schema(self, schema):
+        self.schema = schema
+
+    # entry is a DataEntry object
     def add(self, entry):
+
+        # TODO: constraints around entry object
+        if self.schema is None or len(self.schema) <= 0:
+            raise "Database schema must be defined"
 
         statement = "INSERT INTO"
 
@@ -269,7 +248,7 @@ class DBImporter:
         # duplicates report written to file
         if duplicate_count > 0:
             date_time = datetime.now()
-            dupe_file = "./duplicates_%s.sql" % date_time.strftime("%Y%m%d-%H%M%S")
+            dupe_file = "./duplicates_%s_%s.sql" % (self.importer_name, date_time.strftime("%Y%m%d-%H%M%S"))
             print("\n\nEncountered duplicate entries. Dumping failed inserts to file %s" % dupe_file)
             self.logger.warning("Encountered duplicate entries. Dumping failed inserts to file %s" % dupe_file)
 

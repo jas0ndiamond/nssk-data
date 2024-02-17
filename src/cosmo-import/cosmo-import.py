@@ -1,14 +1,13 @@
 import csv
 import sys
 
-from DataEntry import DataEntry
+from CosmoDataEntry import DataEntry
 from DBImporter import DBImporter
 
 import logging
 
 ################
 # logging
-
 
 logFile = "run.log"
 
@@ -23,15 +22,21 @@ logging.getLogger("DBImporter").setLevel(logging.DEBUG)
 
 ###############
 
+# TODO: shell param for main config file
+
+# TODO: move to config file
 filename = "/home/jason/Pub/doi.org_10.25976_0gvo-9d12.csv"
 
-DB_CONFIG_FILE = "../../db.json"
+# TODO: not just db config
+DB_CONFIG_FILE = "../../conf/cosmo.json"
 
 # Wagg Creek
 # WAGG01
+# WAGG02
 # WAGG03
 
 # Mosquito Creek
+# MOSQ01
 # MOSQ02
 # MOSQ03
 # MOSQ04
@@ -44,12 +49,14 @@ DB_CONFIG_FILE = "../../db.json"
 # MACK02
 # MACK03
 # MACK04
+# MACK05
 
 # Hastings Creek
 # HAST01
 # HAST02
 # HAST03
 
+# Move to config file
 dataset_name_field = "DatasetName"
 cosmo_dataset_name = 'DFO PSEC Community Stream Monitoring (CoSMo)'
 monitoring_location_id_field = "MonitoringLocationID"
@@ -73,6 +80,49 @@ sensors = {
     "HAST02",
     "HAST03"
 }
+
+cosmo_schema = [
+    "DatasetName",
+    "MonitoringLocationID",
+    "MonitoringLocationName",
+    "MonitoringLocationLatitude",
+    "MonitoringLocationLongitude",
+    "MonitoringLocationHorizontalCoordinateReferenceSystem",
+    "MonitoringLocationHorizontalAccuracyMeasure",
+    "MonitoringLocationHorizontalAccuracyUnit",
+    "MonitoringLocationVerticalMeasure",
+    "MonitoringLocationVerticalUnit",
+    "MonitoringLocationType",
+    "ActivityType",
+    "ActivityMediaName",
+    "ActivityStartDate",
+    "ActivityStartTime",
+    "ActivityEndDate",
+    "ActivityEndTime",
+    "ActivityDepthHeightMeasure",
+    "ActivityDepthHeightUnit",
+    "SampleCollectionEquipmentName",
+    "CharacteristicName",
+    "MethodSpeciation",
+    "ResultSampleFraction",
+    "ResultValue",
+    "ResultUnit",
+    "ResultValueType",
+    "ResultDetectionCondition",
+    "ResultDetectionQuantitationLimitMeasure",
+    "ResultDetectionQuantitationLimitUnit",
+    "ResultDetectionQuantitationLimitType",
+    "ResultStatusID",
+    "ResultComment",
+    "ResultAnalyticalMethodID",
+    "ResultAnalyticalMethodContext",
+    "ResultAnalyticalMethodName",
+    "AnalysisStartDate",
+    "AnalysisStartTime",
+    "AnalysisStartTimeZone",
+    "LaboratoryName",
+    "LaboratorySampleID",
+]
 
 
 def want_row(in_row):
@@ -132,7 +182,10 @@ def main(args):
     rows_processed = 0
 
     db_importer = DBImporter(DB_CONFIG_FILE)
+    db_importer.set_importer_name("cosmo")
+    db_importer.set_schema(cosmo_schema)
 
+    # TODO benchmark and output
     with open(filename, newline='', encoding='utf-8') as csvfile:
         reader = csv.DictReader(csvfile, delimiter=',', strict=True)
 
