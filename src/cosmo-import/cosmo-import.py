@@ -24,7 +24,7 @@ logging.getLogger("DBImporter").setLevel(logging.DEBUG)
 
 # TODO: shell param for main config file
 
-# TODO: move to config file
+# TODO: move to config file or shell param
 filename = "/home/jason/Pub/doi.org_10.25976_0gvo-9d12.csv"
 
 # TODO: not just db config

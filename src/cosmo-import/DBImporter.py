@@ -4,51 +4,6 @@ from datetime import datetime
 import json
 import logging
 
-# TODO: accept this array as a parameter
-# Order of fields matters
-cosmo_schema = [
-    "DatasetName",
-    "MonitoringLocationID",
-    "MonitoringLocationName",
-    "MonitoringLocationLatitude",
-    "MonitoringLocationLongitude",
-    "MonitoringLocationHorizontalCoordinateReferenceSystem",
-    "MonitoringLocationHorizontalAccuracyMeasure",
-    "MonitoringLocationHorizontalAccuracyUnit",
-    "MonitoringLocationVerticalMeasure",
-    "MonitoringLocationVerticalUnit",
-    "MonitoringLocationType",
-    "ActivityType",
-    "ActivityMediaName",
-    "ActivityStartDate",
-    "ActivityStartTime",
-    "ActivityEndDate",
-    "ActivityEndTime",
-    "ActivityDepthHeightMeasure",
-    "ActivityDepthHeightUnit",
-    "SampleCollectionEquipmentName",
-    "CharacteristicName",
-    "MethodSpeciation",
-    "ResultSampleFraction",
-    "ResultValue",
-    "ResultUnit",
-    "ResultValueType",
-    "ResultDetectionCondition",
-    "ResultDetectionQuantitationLimitMeasure",
-    "ResultDetectionQuantitationLimitUnit",
-    "ResultDetectionQuantitationLimitType",
-    "ResultStatusID",
-    "ResultComment",
-    "ResultAnalyticalMethodID",
-    "ResultAnalyticalMethodContext",
-    "ResultAnalyticalMethodName",
-    "AnalysisStartDate",
-    "AnalysisStartTime",
-    "AnalysisStartTimeZone",
-    "LaboratoryName",
-    "LaboratorySampleID",
-]
-
 COMMIT_SIZE = 20
 
 CONFIG_HOST = "host"
@@ -104,7 +59,7 @@ class DBImporter:
         values_segment = "VALUES ("
 
         # build values
-        for field in cosmo_schema:
+        for field in self.schema:
             fields_segment += "%s," % field
 
             # convert py None values to mysql NULL values
