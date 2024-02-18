@@ -42,6 +42,10 @@ class DBImporter:
     def add(self, entry):
 
         # TODO: constraints around entry object
+        # is entry a subclass of DataEntry?
+        # is the entry object value collection the same size as the schema?
+
+        # check if a schema is defined
         if self.schema is None or len(self.schema) <= 0:
             raise "Database schema must be defined"
 
@@ -63,7 +67,7 @@ class DBImporter:
             fields_segment += "%s," % field
 
             # convert py None values to mysql NULL values
-            if entry.get(field) is not None:
+            if entry.is_defined(field):
                 values_segment += "'%s'," % entry.get(field)
             else:
                 values_segment += "NULL,"

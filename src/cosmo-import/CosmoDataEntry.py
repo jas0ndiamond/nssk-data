@@ -1,5 +1,10 @@
-import pprint
-import re
+from pathlib import Path
+import sys
+
+path_root = Path(__file__).parents[2]
+sys.path.append(str(path_root))
+
+from src.data.DataEntry import DataEntry
 
 
 # DatasetName
@@ -43,81 +48,50 @@ import re
 # LaboratoryName
 # LaboratorySampleID
 
-def _is_valid(fields):
-    # no narrowing of dataset done here
-    # just check for data validity
-
-    # max length on field data
-
-    for field in fields:
-        if False:
-            return False
-
-    return True
-
-
-class DataEntry:
+class CosmoDataEntry(DataEntry):
 
     # row_obj is any structure that can be indexed and is iterable
     # csv, json, raw array
     def __init__(self, row_obj):
 
-        if _is_valid(row_obj) is False:
-            raise "Invalid data. Cannot build data entry"
-
-        # TODO: type constraints
-            # is indexable
-            # is iterable
+        # raise exception if theres a problem
+        super().__init__(row_obj)
 
         # at this point we have a valid entry, but still want to clean it up
         # remove alphanumeric+ chars used in sql syntax [ ] { } | " ' ;
 
-        self.monitoringLocationID = row_obj["MonitoringLocationID"]
+        self.monitoringLocationID = self.get("MonitoringLocationID")
 
         # TODO: make generic like "destinationTable"
         # set fields that will be used in destination and uniqueness checks
         if self.monitoringLocationID is None:
             pass
 
-        # date
-
-        # time
-
-        # CharacteristicName
-        # temperature
-        # Conductivity
-        # Specific conductance
-
         ##################
-        # scrub invalid characters
-        # [ #$%[]{},"'| ]
+        # value buckets - db requires these for entry uniqueness
+        if self.get('ActivityEndDate') == '':
+            self.set('ActivityEndDate', None)
 
-        scrub_pattern = re.compile(r'[\[\]\'\"\$\#\@\!\{\}\,\|]')
+        if self.get('ActivityEndTime') == '':
+            self.set('ActivityEndTime', None)
 
-        for field in row_obj:
-            re.sub(scrub_pattern, '',  row_obj[field])
+        if self.get('AnalysisStartDate') == '':
+            self.set('AnalysisStartDate', None)
 
-        # TODO: move to subclass
-        ##################
-        # value buckets
-        if row_obj['ActivityEndDate'] == '':
-            row_obj['ActivityEndDate'] = None
+        if self.get('AnalysisStartTime') == '':
+            self.set('AnalysisStartTime', None)
 
-        if row_obj['ActivityEndTime'] == '':
-            row_obj['ActivityEndTime'] = None
+    def _is_valid(self, fields):
+        # no narrowing of dataset done here
+        # just check for data validity
 
-        if row_obj['AnalysisStartDate'] == '':
-            row_obj['AnalysisStartDate'] = None
+        # max length on field data
 
-        if row_obj['AnalysisStartTime'] == '':
-            row_obj['AnalysisStartTime'] = None
+        for field in fields:
+            if False:
+                return False
 
-        ##################
-
-        self.row_data = row_obj
-
-    def get(self, field_name):
-        return self.row_data[field_name]
+        return True
 
     def get_monitoring_location_id(self):
         return self.monitoringLocationID
@@ -128,5 +102,3 @@ class DataEntry:
     def get_entry_time(self):
         pass
 
-    def to_s(self):
-        pprint.pprint(self.fields)

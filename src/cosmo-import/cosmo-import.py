@@ -1,8 +1,9 @@
 import csv
 import sys
+import timeit
 
-from CosmoDataEntry import DataEntry
-from DBImporter import DBImporter
+from CosmoDataEntry import CosmoDataEntry
+from src.importer.DBImporter import DBImporter
 
 import logging
 
@@ -185,7 +186,7 @@ def main(args):
     db_importer.set_importer_name("cosmo")
     db_importer.set_schema(cosmo_schema)
 
-    # TODO benchmark and output
+    csvread_start_time = timeit.default_timer()
     with open(filename, newline='', encoding='utf-8') as csvfile:
         reader = csv.DictReader(csvfile, delimiter=',', strict=True)
 
@@ -208,16 +209,20 @@ def main(args):
             # narrow our incoming data here
             # want only some rows
             if want_row(row):
-                db_importer.add(DataEntry(row))
+                db_importer.add(CosmoDataEntry(row))
                 rows_processed += 1
 
                 print("\r\tRows processed: %d" % rows_processed, end='', flush=True)
             else:
+                # use sparingly
                 if logger.isEnabledFor(logging.DEBUG):
                     logger.debug("Rejecting row:\n%s\n---------", row)
 
-    print("\nProcessed %d rows from csv file" % rows_processed)
-    logger.info("Processed %d rows from csv file" % rows_processed)
+    csvread_elapsed = (timeit.default_timer() - csvread_start_time)
+
+    log_msg = "\nProcessed %d rows from csv file in %.3f sec" % (rows_processed, csvread_elapsed)
+    print(log_msg, flush=True)
+    logger.info(log_msg)
 
     ################
     # write to database
@@ -225,10 +230,15 @@ def main(args):
     if dry_run:
         db_importer.dump()
     else:
+        dbimport_start_time = timeit.default_timer()
         db_importer.execute()
-        pass
+        dbimport_elapsed = timeit.default_timer() - dbimport_start_time
 
-    logger.info("Finished import")
+        log_msg = "Completed database import in %.3f sec" % dbimport_elapsed
+        print(log_msg, flush=True)
+        logger.info(log_msg)
+
+    logger.info("Exiting...")
 
 
 ##############################
