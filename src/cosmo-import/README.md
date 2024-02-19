@@ -2,18 +2,21 @@
 
 Imports data from CoSMo CSV data dumps into a MySQL database
 
-# Setup
+---
+## Setup
 
 1. Create a database config file from the template in nssk-data/conf for the database that will house the imported data.
    1. Ensure the user has `INSERT` access to database.
 2. Acquire the data dump from the CoSMo website
 3. Set the list of sensors in `cosmo-import.py`
 
-# Run
+---
+## Run
 
 `python3 cosmo-import.py`
 
-# Notes
+---
+## Notes
 
 Logs output to `run.log`
 

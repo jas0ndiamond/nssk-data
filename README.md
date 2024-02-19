@@ -3,11 +3,11 @@
 Data Analysis Apps and Tools for North Shore Streamkeepers
 
 ---
-# Requirements
+## Requirements
 * Python 3.9 or greater for datastream.py
 
 ---
-# Setup
+## Setup
 * Build, compile, install, and setup Python 3.11.7 with pip
 
 ```
@@ -30,20 +30,21 @@ python3 -m pip install wheel
 
 `venv/bin/python -m pip install git+https://github.com/datastreamapp/datastream-py`
 
-# Obtain DataSets and Resources 
+---
+## Obtain DataSets and Resources 
 
 * Obtain DOI for your datasets
 * Obtain API Key from the datastreamapp project (https://github.com/datastreamapp/api-docs)
 * Follow examples from the datastreamapp project.
 ---
-# Run imports
+## Run imports
 
 CoSMo
 
 Flowworks
 
 ---
-# Links
+## Links
 * https://nssk.ca
 * https://datastream.org/
 * https://github.com/datastreamapp/
