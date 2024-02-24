@@ -44,7 +44,7 @@ Create databases to manage imported data from NSSK sources.
 [Setup](docker/README.md)
 
 Sources:
-* [CoSMo](src/cosmo-import/README.md)
+* [CoSMo](src/cosmo/README.md)
 * Flowworks
 * CNV
 
