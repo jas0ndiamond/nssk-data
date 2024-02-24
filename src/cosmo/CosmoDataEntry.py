@@ -4,6 +4,7 @@ import sys
 path_root = Path(__file__).parents[2]
 sys.path.append(str(path_root))
 
+# depends on adding src to sys.path
 from src.data.DataEntry import DataEntry
 
 
@@ -101,4 +102,3 @@ class CosmoDataEntry(DataEntry):
 
     def get_entry_time(self):
         pass
-
