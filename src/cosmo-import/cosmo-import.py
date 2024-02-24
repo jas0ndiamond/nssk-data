@@ -10,7 +10,7 @@ import logging
 ################
 # logging
 
-logFile = "run.log"
+logFile = "cosmo-import.log"
 
 # init logging outside of constructor so constructed objects can access
 logging.basicConfig(filename=logFile, format='%(asctime)s [%(levelname)s] -- [%(name)s]-[%(funcName)s]: %(message)s')
@@ -23,11 +23,12 @@ logging.getLogger("DBImporter").setLevel(logging.DEBUG)
 
 ###############
 
-# TODO: shell param for main config file
+
 
 # TODO: move to config file or shell param
-filename = "/home/jason/Pub/doi.org_10.25976_0gvo-9d12.csv"
+filename = "/home/jason/Pub/nssk-data-dumps/doi.org_10.25976_0gvo-9d12.csv"
 
+# TODO: shell param for main config file
 # TODO: not just db config
 DB_CONFIG_FILE = "../../conf/cosmo.json"
 
@@ -165,7 +166,7 @@ def main(args):
     if len(args) == 2:
         if args[1] == "-h" or args[1] == "-help" or args[1] == "--help":
             print(
-                "Usage: python3 db_import.py [--dry-run]\n"
+                "Usage: python3 cosmo-import.py [--dry-run]\n"
                 "\t--dry-run: output database insert statements. Does not write to database.")
             exit(1)
         elif args[1] == "--dry-run":
@@ -176,7 +177,7 @@ def main(args):
 
     ############################
 
-    logger.info("Beginning import")
+    logger.info("Beginning import of CoSMo data")
 
     #  If csvfile is a file object, it should be opened with newline=''
     # no quote char
