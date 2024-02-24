@@ -1,0 +1,24 @@
+[mysqld]
+
+# TODO: set this explicitly
+# bind-address        = xxx.xxx.xxx.xxx
+
+# low traffic expected
+max_connections=20
+
+character_set_server=UTF8MB4
+
+general_log = on
+general_log_file=/var/log/mysql/mysql.log
+
+log-bin=/var/log/mysql/mysql-bin.log
+
+log-error=/var/log/mysql/mysql-error.log
+
+slow_query_log          = 1
+slow_query_log_file     = /var/log/mysql/mysql-slow.log
+long_query_time = 30
+
+# most users will not be accessing from meaningful hosts.
+# web-facing database will see a lot of bot traffic and host name resolution will impact performance.
+skip-name-resolve

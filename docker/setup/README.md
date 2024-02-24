@@ -1,0 +1,1 @@
+MySQL database setup scripts go in this directory.

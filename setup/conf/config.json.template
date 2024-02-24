@@ -1,0 +1,12 @@
+{
+    "host": "mydbhost",
+    "port": 53306,
+    "setup-user": "root",
+    "setup-pass": "root-pass",
+    "users": {
+        "nssk": "nssk-pass",
+        "nssk-import": "nssk-import-pass",
+        "nssk-backup": "nssk-backup-pass",
+        "nssk-admin": "nssk-admin-pass"
+    }
+}
