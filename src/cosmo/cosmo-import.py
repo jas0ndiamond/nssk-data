@@ -10,7 +10,7 @@ import logging
 ################
 # logging
 
-logFile = "cosmo-import.log"
+logFile = "cosmo.log"
 
 # init logging outside of constructor so constructed objects can access
 logging.basicConfig(filename=logFile, format='%(asctime)s [%(levelname)s] -- [%(name)s]-[%(funcName)s]: %(message)s')
@@ -166,7 +166,7 @@ def main(args):
     if len(args) == 2:
         if args[1] == "-h" or args[1] == "-help" or args[1] == "--help":
             print(
-                "Usage: python3 cosmo-import.py [--dry-run]\n"
+                "Usage: python3 cosmo.py [--dry-run]\n"
                 "\t--dry-run: output database insert statements. Does not write to database.")
             exit(1)
         elif args[1] == "--dry-run":
