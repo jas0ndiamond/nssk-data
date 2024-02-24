@@ -28,7 +28,7 @@ python3 -m pip install wheel
 
 * Install datastream-py
 
-`venv/bin/python -m pip install git+https://github.com/datastreamapp/datastream-py`
+`venv/bin/python3 -m pip install git+https://github.com/datastreamapp/datastream-py`
 
 ---
 ## Obtain DataSets and Resources 
@@ -37,11 +37,29 @@ python3 -m pip install wheel
 * Obtain API Key from the datastreamapp project (https://github.com/datastreamapp/api-docs)
 * Follow examples from the datastreamapp project.
 ---
-## Run imports
+## Setup & Run imports
 
-CoSMo
+Create databases to manage imported data from NSSK sources.
 
-Flowworks
+[Setup](docker/README.md)
+
+Sources:
+* [CoSMo](src/cosmo-import/README.md)
+* Flowworks
+* CNV
+
+---
+## Unit Tests
+
+```
+cd ./test/
+
+# Run all tests
+../venv/bin/python3 -m unittest
+
+# Run test suite by name
+../venv/bin/python3 -m unittest CSVScrubTests.py
+```
 
 ---
 ## Links
