@@ -2,7 +2,7 @@
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 
-BACKUP_DIR="$SCRIPT_DIR"../../backups
+BACKUP_DIR="$SCRIPT_DIR"/../../backups
 CRED_FILE="$SCRIPT_DIR"/../config.json
 
 if [ ! -f "$CRED_FILE" ]; then
@@ -12,8 +12,8 @@ fi
 
 HOST="localhost"
 USER="nssk_backup"
-PORT="$(jq '.port' < "$CRED_FILE")"
-CRED="$(jq '.users.nssk_backup' < "$CRED_FILE")"
+PORT="$(jq -r '.port' < "$CRED_FILE")"
+CRED="$(jq -r '.users.nssk_backup' < "$CRED_FILE")"
 
 if [[ -z $CRED ]]; then
   echo "Could not read credentials"

@@ -4,7 +4,7 @@ MAX_DEL=20
 MIN_KEEP=20
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-BACKUP_DIR="$SCRIPT_DIR"../../backups
+BACKUP_DIR="$SCRIPT_DIR"/../../backups
 
 # trim backups of we're over our maximum
 BACKUP_COUNT=$(/bin/ls -l "$BACKUP_DIR" | grep -c "^total")
