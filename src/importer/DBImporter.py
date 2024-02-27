@@ -4,7 +4,9 @@ from datetime import datetime
 import json
 import logging
 
-COMMIT_SIZE = 20
+DEFAULT_COMMIT_SIZE = 100
+COMMIT_SIZE_MIN = 10
+COMMIT_SIZE_MAX = 50000
 
 CONFIG_HOST = "host"
 CONFIG_PORT = "port"
@@ -25,6 +27,8 @@ class DBImporter:
 
         self.importer_name = "DEFAULT"
 
+        self.commit_size = DEFAULT_COMMIT_SIZE
+
         self.schema = None
         self.schema_mapping = None
 
@@ -32,6 +36,12 @@ class DBImporter:
 
     def set_importer_name(self, new_name):
         self.importer_name = new_name
+
+    def set_commit_size(self, size):
+        if COMMIT_SIZE_MIN <= size <= COMMIT_SIZE_MAX:
+            self.commit_size = size
+        else:
+            self.logger.warning("Rejecting invalid commit size")
 
     # set the schema to expect for the data, and to inform construction of inserts.
     # schema should be an ordered array of fields.
@@ -85,7 +95,11 @@ class DBImporter:
 
             # convert py None values to mysql NULL values
             if entry.is_defined(field):
-                values_segment += "'%s'," % entry.get(field)
+                value = entry.get(field)
+                if value is None:
+                    values_segment += "NULL,"
+                else:
+                    values_segment += "'%s'," % value
             else:
                 values_segment += "NULL,"
 
@@ -155,8 +169,10 @@ class DBImporter:
 
         insert_count = 0
         duplicate_count = 0
+        error_count = 0
 
         duplicates = []
+        errors = []
 
         # build database connection
         try:
@@ -186,7 +202,7 @@ class DBImporter:
                                 cursor.execute(insert)
 
                                 # commit every COMMIT_SIZE inserts
-                                if insert_count % COMMIT_SIZE == 0:
+                                if insert_count % self.commit_size == 0:
                                     connection.commit()
 
                                 insert_count += 1
@@ -207,9 +223,15 @@ class DBImporter:
                                     # problem but not a duplicate row
                                     raise e
                             except Error as e:
-                                self.logger.warning("Error running an insert:\n%s\nContinuing..." % insert, e)
+                                self.logger.warning("Error running an insert:\n%s\nContinuing...\n" % insert)
+                                self.logger.warning(e)
 
-                            print("\r\t%d / %d (%d duplicates)" % (insert_count, total_inserts, duplicate_count),
+                                errors.append(insert)
+
+                                error_count += 1
+
+                            print("\r\t%d / %d (%d duplicates, %d errors)" %
+                                  (insert_count, total_inserts, duplicate_count, error_count),
                                   end='', flush=True)
 
                         # commit remaining inserts
@@ -221,17 +243,36 @@ class DBImporter:
         except Error as e:
             self.logger.error("Error connecting to database", e)
 
+        date_time = datetime.now()
+
         # duplicates report written to file
         if duplicate_count > 0:
-            date_time = datetime.now()
+
             dupe_file = "./duplicates_%s_%s.sql" % (self.importer_name, date_time.strftime("%Y%m%d-%H%M%S"))
-            print("\n\nEncountered duplicate entries. Dumping failed inserts to file %s" % dupe_file)
-            self.logger.warning("Encountered duplicate entries. Dumping failed inserts to file %s" % dupe_file)
+
+            msg = "Encountered duplicate entries. Dumping failed inserts to file %s" % dupe_file
+
+            print("\n\n%s" % msg)
+            self.logger.warning(msg)
 
             with open(dupe_file, 'w', encoding='utf-8') as filehandle:
                 for insert in duplicates:
                     filehandle.write("%s\n" % insert)
 
+        if error_count > 0:
+            errors_file = "./errors_%s_%s.sql" % (self.importer_name, date_time.strftime("%Y%m%d-%H%M%S"))
+
+            msg = "Encountered errors inserting entries. Dumping failed inserts to file %s" % errors_file
+
+            print("\n\n%s" % msg)
+            self.logger.warning(msg)
+
+            with open(errors_file, 'w', encoding='utf-8') as filehandle:
+                for insert in errors:
+                    filehandle.write("%s\n" % insert)
+
         # report outcome
-        self.logger.info("Completed %d inserts. Encountered %d duplicates" % (insert_count, duplicate_count))
-        print("\nCompleted %d inserts. Encountered %d duplicates" % (insert_count, duplicate_count))
+        msg = ("Completed %d inserts. Encountered %d duplicates and %d errors" %
+               (insert_count, duplicate_count, error_count))
+        self.logger.info(msg)
+        print("\n%s" % msg)
