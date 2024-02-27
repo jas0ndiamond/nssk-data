@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # custom log levels
-logging.getLogger("CNVRainfallDataEntry").setLevel(logging.DEBUG)
-logging.getLogger("DBImporter").setLevel(logging.DEBUG)
+logging.getLogger("CNVRainfallDataEntry").setLevel(logging.INFO)
+logging.getLogger("DBImporter").setLevel(logging.INFO)
 
 ###############
 

@@ -19,10 +19,10 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # custom log levels
-logging.getLogger("DBImporter").setLevel(logging.DEBUG)
+logging.getLogger("CosmoDataEntry").setLevel(logging.INFO)
+logging.getLogger("DBImporter").setLevel(logging.INFO)
 
 ###############
-
 
 
 # TODO: move to config file or shell param
