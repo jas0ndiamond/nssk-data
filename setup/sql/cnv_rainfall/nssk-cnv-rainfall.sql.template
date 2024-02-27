@@ -1,0 +1,10 @@
+CREATE TABLE $SITE (
+	MeasurementTimestamp DATETIME,
+	AirTemperature DECIMAL(9,7),
+	BarometricPressure DECIMAL(10,5),
+	HourlyRainfall DECIMAL(6,3),
+	Rainfall DECIMAL(6,3)
+);
+
+ALTER TABLE $SITE ADD UNIQUE measurement (MeasurementTimestamp);
+ALTER TABLE $SITE ADD PRIMARY KEY (MeasurementTimestamp);
