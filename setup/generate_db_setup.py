@@ -34,6 +34,33 @@ NSSK_ADMIN_USER = "nssk_admin"
 
 #####################
 
+cosmo_monitoring_location_ids = [
+    "WAGG01",
+    "WAGG02",
+    "WAGG03",
+    "MOSQ01",
+    "MOSQ02",
+    "MOSQ03",
+    "MOSQ04",
+    "MOSQ05",
+    "MOSQ06",
+    "MOSQ07",
+    "MISS01",
+    "MACK02",
+    "MACK03",
+    "MACK04",
+    "MACK05",
+    "HAST01",
+    "HAST02",
+    "HAST03"
+]
+
+cnv_rainfall_sites = [
+    "CNV"
+]
+
+#####################
+
 # Dockerfile and start.sh expect this file. do not make configurable
 output_file = "../docker/setup/0_nssk_setup.sql"
 
@@ -84,9 +111,9 @@ def create_databases():
 
 def configure_users():
     # nssk - standard read-only user for working with data
-    # nssk-import - user for importing data from various sources
-    # nssk-admin - user/db management
-    # nssk-backup - user for executing backups with mysqldump
+    # nssk_import - user for importing data from various sources
+    # nssk_admin - user/db management
+    # nssk_backup - user for executing backups with mysqldump
 
     ######################
     # create users
@@ -168,10 +195,10 @@ def configure_users():
     # backup user permissions
     # local and container networks only
     for database in DATABASES:
-        setup_statements.append("GRANT SELECT, SHOW VIEW, TRIGGER, LOCK TABLES ON %s.* TO '%s'@'%s';" %
+        setup_statements.append("GRANT SELECT, SHOW VIEW, TRIGGER, LOCK TABLES, EVENT, USAGE ON %s.* TO '%s'@'%s';" %
                                 (database, NSSK_BACKUP_USER, LOCAL_NETWORK))
 
-        setup_statements.append("GRANT SELECT, SHOW VIEW, TRIGGER, LOCK TABLES ON %s.* TO '%s'@'%s';" %
+        setup_statements.append("GRANT SELECT, SHOW VIEW, TRIGGER, LOCK TABLES, EVENT, USAGE ON %s.* TO '%s'@'%s';" %
                                 (database, NSSK_BACKUP_USER, CONTAINER_NETWORK))
 
     # backup needs global process privilege
@@ -197,29 +224,7 @@ def limit_remote_root_login():
 
 
 def setup_cosmo_tables():
-    table_template = Template(open("sql/nssk-cosmo-sensor-table.sql.template").read())
-
-    # TODO: get from file or move to top
-    cosmo_monitoring_location_ids = [
-        "WAGG01",
-        "WAGG02",
-        "WAGG03",
-        "MOSQ01",
-        "MOSQ02",
-        "MOSQ03",
-        "MOSQ04",
-        "MOSQ05",
-        "MOSQ06",
-        "MOSQ07",
-        "MISS01",
-        "MACK02",
-        "MACK03",
-        "MACK04",
-        "MACK05",
-        "HAST01",
-        "HAST02",
-        "HAST03"
-    ]
+    table_template = Template(open("sql/CoSMo/nssk-cosmo-sensor-table.sql.template").read())
 
     # set the database to create the tables in
     setup_statements.append("use %s;" % NSSK_COSMO_DB)
@@ -230,7 +235,14 @@ def setup_cosmo_tables():
 
 
 def setup_cnv_rainfall_tables():
-    pass
+    table_template = Template(open("sql/cnv_rainfall/nssk-cnv-rainfall.sql.template").read())
+
+    # set the database to create the tables in
+    setup_statements.append("use %s;" % NSSK_CNV_RF_DB)
+
+    for monitoring_location_id in cnv_rainfall_sites:
+        create_table_sql = table_template.substitute(SITE="CNV")
+        setup_statements.append(create_table_sql)
 
 
 def setup_flowworks_tables():
