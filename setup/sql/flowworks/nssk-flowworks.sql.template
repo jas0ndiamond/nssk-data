@@ -1,0 +1,7 @@
+CREATE TABLE $SITE (
+	MeasurementTimestamp DATETIME,
+	FlowReading DECIMAL(12,8)
+);
+
+ALTER TABLE $SITE ADD UNIQUE measurement (MeasurementTimestamp);
+ALTER TABLE $SITE ADD PRIMARY KEY (MeasurementTimestamp);
