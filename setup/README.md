@@ -50,7 +50,8 @@ Creates SQL script `0_nssk_setup.sql` in `nssk-data/docker/setup/`
 ### Deploy container to container host
 
 `rsync -rvh --mkpath nssk-data/docker user@my.container.host:/path/to/nssk-data`
-`scp nssk-data/setup/config.json user@my.container.host:/path/to/nssk-data/docker`
+
+`scp nssk-data/setup/conf/config.json user@my.container.host:/path/to/nssk-data/docker`
 
 On the container host, build the docker image and name it `nssk-mysql`
 
