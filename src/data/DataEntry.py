@@ -6,9 +6,10 @@ class DataEntry:
 
     # row_obj is any structure that can be indexed and is iterable
     # csv, json, raw array
-    def __init__(self, row_obj):
+    # TODO: maybe standardize on dict. defer dict creation to the import, who will have context
+    def __init__(self, entry_obj):
 
-        if self._is_valid(row_obj) is False:
+        if self._is_valid(entry_obj) is False:
             raise "Invalid data. Cannot build data entry"
 
         # TODO: type constraints. enforce an alphabet
@@ -24,12 +25,16 @@ class DataEntry:
 
         scrub_pattern = re.compile(r'[\[\]\'\"\$\#\@\!\{\}\,\|]')
 
-        for field in row_obj:
-            re.sub(scrub_pattern, '', row_obj[field])
+        for field in entry_obj:
+            value = str(entry_obj[field])
 
-        self.row_data = row_obj
+            value = re.sub(scrub_pattern, '', value)
 
-    def _is_valid(self, row_obj):
+            entry_obj[field] = value
+
+        self.entry_data = entry_obj
+
+    def _is_valid(self, entry_obj):
         # TODO: just return true
         raise Exception("DataEntry._is_valid not implemented in subclass")
 
@@ -37,16 +42,16 @@ class DataEntry:
         raise Exception("DataEntry.get_db_destination not implemented in subclass")
 
     def get(self, field_name):
-        return self.row_data[field_name]
+        return self.entry_data[field_name]
 
     def is_defined(self, field_name):
-        return self.row_data[field_name] is not None
+        return self.entry_data[field_name] is not None
 
     def set(self, field_name, value):
-        self.row_data[field_name] = value
+        self.entry_data[field_name] = value
 
-    def _get_row_data(self):
-        return self.row_data
+    def _get_entry_data(self):
+        return self.entry_data
 
     # def get_entry_date(self):
     #     pass
@@ -55,4 +60,4 @@ class DataEntry:
     #     pass
 
     def to_s(self):
-        pprint.pprint(self.fields)
+        pprint.pprint(self.entry_data)

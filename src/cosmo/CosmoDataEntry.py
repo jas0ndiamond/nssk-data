@@ -53,10 +53,10 @@ class CosmoDataEntry(DataEntry):
 
     # row_obj is any structure that can be indexed and is iterable
     # csv, json, raw array
-    def __init__(self, row_obj):
+    def __init__(self, entry_obj):
 
         # raise exception if theres a problem
-        super().__init__(row_obj)
+        super().__init__(entry_obj)
 
         self.monitoringLocationID = self.get("MonitoringLocationID")
 

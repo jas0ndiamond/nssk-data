@@ -20,32 +20,21 @@ class CNVRainfallDataEntry(DataEntry):
 
     # row_obj is any structure that can be indexed and is iterable
     # csv, json, raw array
-    def __init__(self, row_obj):
+    def __init__(self, entry_obj):
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
 
         # raise exception if theres a problem
-        super().__init__(row_obj)
+        super().__init__(entry_obj)
 
         # at this point we have a valid entry, but still want to clean it up
-        # remove alphanumeric+ chars used in sql syntax [ ] { } | " ' ;
+        # TODO: remove alphanumeric+ chars used in sql syntax [ ] { } | " ' ;
 
         # only one site: set in generate_db_setup.py
         self.site = "CNV"
 
-        # remap row data to the mysql schema
-        # for key in self.field_mapping:
-        #     value = self.get(key)
-        #     new_key = self.field_mapping[key]
-        #     self.logger.debug("Remapping key from '%s' to '%s' for value '%s"'' % (key, new_key, value))
-        #
-        #     if new_key is None:
-        #         raise Exception("Unexpected key encountered during remap: %s" % key)
-        #
-        #     self.set(new_key, value)
-
         ##################
-        # value buckets - db requires these for entry uniqueness
+        # value buckets - some entries can be incomplete
         if self.get('yyyy/MM/dd HH:mm:ss') == '':
             self.set('yyyy/MM/dd HH:mm:ss', None)
 
