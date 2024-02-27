@@ -35,7 +35,7 @@ docker run\
  -p 53306:3306\
  --cpus=2\
  --memory=2.5g\
- -e MYSQL_ROOT_PASSWORD="$(jq '."setup-pass"' < $CONFIG_FILE)"\
+ -e MYSQL_ROOT_PASSWORD="$(jq -r '."setup-pass"' < $CONFIG_FILE)"\
  -v "$(pwd)"/data:/var/lib/mysql\
  -v "$(pwd)"/conf.d:/etc/mysql/conf.d\
  -v "$(pwd)"/mysql:/var/log/mysql\
@@ -43,8 +43,9 @@ docker run\
  nssk-mysql &&
 
 # TODO: may not always have logging enabled. add a switch for this or detect it from files in 'nssk-data/mysql'
+# TODO: wait on container healthcheck
 # start fail2ban in container. requires mysql logs to be in place so wait for the database to fully start up.
-echo "Waiting before fail2ban start" &&
+echo "Waiting to start fail2ban" &&
 sleep 40 &&
 
 echo "Starting fail2ban" &&
@@ -53,6 +54,6 @@ sleep 10 &&
 docker exec -it nssk-data /etc/init.d/fail2ban status &&
 echo "Removing setup script from container filesystem" &&
 docker exec -it nssk-data rm -v /docker-entrypoint-initdb.d/0_nssk_setup.sql &&
-echo "Container startup completed. Move the config file to a secure location."
+echo "Container startup completed. Move the config file and setup script to a secure location."
 
 # TODO: check that /docker-entrypoint-initdb.d/ is empty
