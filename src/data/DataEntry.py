@@ -11,7 +11,7 @@ class DataEntry:
         if self._is_valid(row_obj) is False:
             raise "Invalid data. Cannot build data entry"
 
-        # TODO: type constraints
+        # TODO: type constraints. enforce an alphabet
         # is indexable
         # is iterable
 
@@ -30,7 +30,11 @@ class DataEntry:
         self.row_data = row_obj
 
     def _is_valid(self, row_obj):
+        # TODO: just return true
         raise Exception("DataEntry._is_valid not implemented in subclass")
+
+    def get_db_destination(self):
+        raise Exception("DataEntry.get_db_destination not implemented in subclass")
 
     def get(self, field_name):
         return self.row_data[field_name]

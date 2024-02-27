@@ -7,7 +7,6 @@ sys.path.append(str(path_root))
 # depends on adding src to sys.path
 from src.data.DataEntry import DataEntry
 
-
 # DatasetName
 # MonitoringLocationID
 # MonitoringLocationName
@@ -49,6 +48,7 @@ from src.data.DataEntry import DataEntry
 # LaboratoryName
 # LaboratorySampleID
 
+
 class CosmoDataEntry(DataEntry):
 
     # row_obj is any structure that can be indexed and is iterable
@@ -58,15 +58,11 @@ class CosmoDataEntry(DataEntry):
         # raise exception if theres a problem
         super().__init__(row_obj)
 
-        # at this point we have a valid entry, but still want to clean it up
-        # remove alphanumeric+ chars used in sql syntax [ ] { } | " ' ;
-
         self.monitoringLocationID = self.get("MonitoringLocationID")
 
-        # TODO: make generic like "destinationTable"
         # set fields that will be used in destination and uniqueness checks
         if self.monitoringLocationID is None:
-            pass
+            raise Exception("Failed to determine MonitoringLocationID for row data %s" % self.to_s())
 
         ##################
         # value buckets - db requires these for entry uniqueness
@@ -88,13 +84,13 @@ class CosmoDataEntry(DataEntry):
 
         # max length on field data
 
-        for field in fields:
-            if False:
-                return False
+        # for field in fields:
+        #     if False:
+        #         return False
 
         return True
 
-    def get_monitoring_location_id(self):
+    def get_db_destination(self):
         return self.monitoringLocationID
 
     def get_entry_date(self):

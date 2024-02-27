@@ -26,6 +26,7 @@ class DBImporter:
         self.importer_name = "DEFAULT"
 
         self.schema = None
+        self.schema_mapping = None
 
         self.inserts = []
 
@@ -37,6 +38,9 @@ class DBImporter:
     # must be defined before invocations of add
     def set_schema(self, schema):
         self.schema = schema
+
+    def set_schema_mapping(self, schema_mapping):
+        self.schema_mapping = schema_mapping
 
     # entry is a DataEntry object
     def add(self, entry):
@@ -64,7 +68,20 @@ class DBImporter:
 
         # build values
         for field in self.schema:
-            fields_segment += "%s," % field
+
+            # remap field if we have a defined mapping
+            if self.schema_mapping is not None:
+                mapped_field = self.schema_mapping[field]
+                if mapped_field is not None:
+                    self.logger.debug("Remapping dump field '%s' to db field '%s'" % (field, mapped_field))
+                    fields_segment += "%s," % mapped_field
+                else:
+                    msg = "Could not resolve field mapping for %s: " % field
+                    self.logger.error(msg)
+                    raise Exception(msg)
+            else:
+                # no mapping
+                fields_segment += "%s," % field
 
             # convert py None values to mysql NULL values
             if entry.is_defined(field):
@@ -87,8 +104,8 @@ class DBImporter:
         # entry is a DataEntry
         # entry fields
 
-        # if we want to have a different table for each monitoring id
-        table = entry.get_monitoring_location_id()
+        # get the table to store the entry
+        table = entry.get_db_destination()
 
         statement += (" " + table + " " + fields_segment + values_segment)
 
