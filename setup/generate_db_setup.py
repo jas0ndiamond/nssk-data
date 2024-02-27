@@ -59,10 +59,17 @@ cnv_rainfall_sites = [
     "CNV"
 ]
 
+cnv_flowworks_sites = [
+    "DNV"
+]
+
 #####################
 
 # Dockerfile and start.sh expect this file. do not make configurable
+# TODO: Split up so we can re-run scripts without purging the database
 output_file = "../docker/setup/0_nssk_setup.sql"
+
+#####################
 
 config = {}
 setup_statements = []
@@ -240,13 +247,20 @@ def setup_cnv_rainfall_tables():
     # set the database to create the tables in
     setup_statements.append("use %s;" % NSSK_CNV_RF_DB)
 
-    for monitoring_location_id in cnv_rainfall_sites:
-        create_table_sql = table_template.substitute(SITE="CNV")
+    for site in cnv_rainfall_sites:
+        create_table_sql = table_template.substitute(SITE=site)
         setup_statements.append(create_table_sql)
 
 
 def setup_flowworks_tables():
-    pass
+    table_template = Template(open("sql/flowworks/nssk-flowworks.sql.template").read())
+
+    # set the database to create the tables in
+    setup_statements.append("use %s;" % NSSK_FLOWWORKS_DB)
+
+    for site in cnv_flowworks_sites:
+        create_table_sql = table_template.substitute(SITE=site)
+        setup_statements.append(create_table_sql)
 
 
 # this may not be necessary any more
