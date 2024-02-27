@@ -128,6 +128,7 @@ cosmo_schema = [
 
 
 def want_row(in_row):
+    # if a row in the data dump is on our shortlist of sensors, we want it
     return (
             in_row[monitoring_location_id_field] in sensors and
             in_row[dataset_name_field] == cosmo_dataset_name
@@ -166,7 +167,7 @@ def main(args):
     if len(args) == 2:
         if args[1] == "-h" or args[1] == "-help" or args[1] == "--help":
             print(
-                "Usage: python3 cosmo.py [--dry-run]\n"
+                "Usage: python3 cosmo-import.py [--dry-run]\n"
                 "\t--dry-run: output database insert statements. Does not write to database.")
             exit(1)
         elif args[1] == "--dry-run":
@@ -178,6 +179,7 @@ def main(args):
     ############################
 
     logger.info("Beginning import of CoSMo data")
+    print("Beginning import of CoSMo data")
 
     #  If csvfile is a file object, it should be opened with newline=''
     # no quote char
