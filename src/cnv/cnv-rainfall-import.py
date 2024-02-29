@@ -26,7 +26,7 @@ logging.getLogger("DBImporter").setLevel(logging.INFO)
 
 
 # TODO: move to config file or shell param
-filename = "/home/jason/Pub/nssk-data-dumps/NorthVancouverCityHall_export_20240215142617.csv"
+filename = "/home/jason/Pub/nssk-data-dumps/NorthVancouverCityHall_export_20240227143315.csv"
 
 # TODO: shell param for main config file
 # TODO: not just db config

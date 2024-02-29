@@ -27,7 +27,7 @@ logging.getLogger("DBImporter").setLevel(logging.INFO)
 
 
 # TODO: move to config file or shell param
-filename = "/home/jason/Pub/nssk-data-dumps/flowworks.json"
+filename = "/home/jason/Pub/nssk-data-dumps/20240227-142952_flowworks.json"
 
 # TODO: shell param for main config file
 # TODO: not just db config
