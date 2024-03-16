@@ -66,21 +66,46 @@ cnv_flowworks_sites = [
 #####################
 
 # Dockerfile and start.sh expect this file. do not make configurable
-# TODO: Split up so we can re-run scripts without purging the database
-output_file = "../docker/setup/0_nssk_setup.sql"
+scriptfile_target_dir = "../docker/setup/"
+create_db_scriptfile = "%s0_create_dbs.sql" % scriptfile_target_dir
+create_users_scriptfile = "%s1_create_users.sql" % scriptfile_target_dir
+create_nssk_cosmo_tables_scriptfile = "%s2_create_nssk_cosmo_tables.sql" % scriptfile_target_dir
+create_cnv_rainfall_tables_scriptfile = "%s3_create_cnv_rainfall_tables.sql" % scriptfile_target_dir
+create_flowworks_tables_scriptfile = "%s4_create_flowworks_tables.sql" % scriptfile_target_dir
 
 #####################
 
 config = {}
-setup_statements = []
+db_setup_statements = []
+user_setup_statements = []
+create_nssk_cosmo_tables = []
+create_cnv_rainfall_tables = []
+create_flowworks_tables = []
 
 
 #############################
 
-def write_setup_script():
-    print("Writing setup script to %s" % output_file)
-    with open(output_file, 'w') as handle:
-        handle.writelines("%s\n" % line for line in setup_statements)
+def write_setup_scripts():
+    print("Writing db setup script to %s" % create_db_scriptfile)
+    with open(create_db_scriptfile, 'w') as handle:
+        handle.writelines("%s\n" % line for line in db_setup_statements)
+
+    print("Writing user setup script to %s" % create_users_scriptfile)
+    with open(create_users_scriptfile, 'w') as handle:
+        handle.writelines("%s\n" % line for line in user_setup_statements)
+
+    print("Writing NSSK CoSMo table setup script to %s" % create_nssk_cosmo_tables_scriptfile)
+    with open(create_nssk_cosmo_tables_scriptfile, 'w') as handle:
+        handle.writelines("%s\n" % line for line in create_nssk_cosmo_tables)
+
+    print("Writing CNV Rainfall table setup script to %s" % create_cnv_rainfall_tables_scriptfile)
+    with open(create_cnv_rainfall_tables_scriptfile, 'w') as handle:
+        handle.writelines("%s\n" % line for line in create_cnv_rainfall_tables)
+
+    print("Writing Flowworks table setup script to %s" % create_flowworks_tables_scriptfile)
+    with open(create_flowworks_tables_scriptfile, 'w') as handle:
+        handle.writelines("%s\n" % line for line in create_flowworks_tables)
+
     print("Writing setup script completed")
 
 
@@ -113,7 +138,7 @@ def check_config():
 # Requires a user that can create databases.
 def create_databases():
     for dbname in DATABASES:
-        setup_statements.append("create database %s;" % dbname)
+        db_setup_statements.append("create database %s;" % dbname)
 
 
 def configure_users():
@@ -129,29 +154,29 @@ def configure_users():
 
     # create nssk user
     # access from WAN, LAN, container networks
-    setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
-                            (NSSK_USER, WAN_NETWORK, config[NSSK_USERS_KEY][NSSK_USER]))
+    user_setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
+                                 (NSSK_USER, WAN_NETWORK, config[NSSK_USERS_KEY][NSSK_USER]))
 
     # create nssk_import
     # access from LAN, container networks
-    setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
-                            (NSSK_IMPORT_USER, LOCAL_NETWORK, config[NSSK_USERS_KEY][NSSK_IMPORT_USER]))
-    setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
-                            (NSSK_IMPORT_USER, CONTAINER_NETWORK, config[NSSK_USERS_KEY][NSSK_IMPORT_USER]))
+    user_setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
+                                 (NSSK_IMPORT_USER, LOCAL_NETWORK, config[NSSK_USERS_KEY][NSSK_IMPORT_USER]))
+    user_setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
+                                 (NSSK_IMPORT_USER, CONTAINER_NETWORK, config[NSSK_USERS_KEY][NSSK_IMPORT_USER]))
 
     # create nssk_backup
     # access from LAN, container networks
-    setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
-                            (NSSK_BACKUP_USER, LOCAL_NETWORK, config[NSSK_USERS_KEY][NSSK_BACKUP_USER]))
-    setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
-                            (NSSK_BACKUP_USER, CONTAINER_NETWORK, config[NSSK_USERS_KEY][NSSK_BACKUP_USER]))
+    user_setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
+                                 (NSSK_BACKUP_USER, LOCAL_NETWORK, config[NSSK_USERS_KEY][NSSK_BACKUP_USER]))
+    user_setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
+                                 (NSSK_BACKUP_USER, CONTAINER_NETWORK, config[NSSK_USERS_KEY][NSSK_BACKUP_USER]))
 
     # create nssk_backup
     # access from LAN, container networks
-    setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
-                            (NSSK_ADMIN_USER, LOCAL_NETWORK, config[NSSK_USERS_KEY][NSSK_ADMIN_USER]))
-    setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
-                            (NSSK_ADMIN_USER, CONTAINER_NETWORK, config[NSSK_USERS_KEY][NSSK_ADMIN_USER]))
+    user_setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
+                                 (NSSK_ADMIN_USER, LOCAL_NETWORK, config[NSSK_USERS_KEY][NSSK_ADMIN_USER]))
+    user_setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
+                                 (NSSK_ADMIN_USER, CONTAINER_NETWORK, config[NSSK_USERS_KEY][NSSK_ADMIN_USER]))
 
     # no longer need passwords
     config[DB_SETUP_USER_PASS] = None
@@ -170,51 +195,53 @@ def configure_users():
     # allow nssk user select access to databases
     for database in DATABASES:
         # WAN_NETWORK is a wildcard so should not need to add LOCAL_NETWORK and CONTAINER_NETWORK
-        setup_statements.append("GRANT SELECT ON %s.* TO '%s'@'%s';" % (database, NSSK_USER, WAN_NETWORK))
+        user_setup_statements.append("GRANT SELECT ON %s.* TO '%s'@'%s';" % (database, NSSK_USER, WAN_NETWORK))
 
     # allow nssk-import user select access to databases in case inserts need to make decisions
     # local and container networks only
     for database in DATABASES:
-        setup_statements.append("GRANT SELECT ON %s.* TO '%s'@'%s';" %
-                                (database, NSSK_IMPORT_USER, LOCAL_NETWORK))
+        user_setup_statements.append("GRANT SELECT ON %s.* TO '%s'@'%s';" %
+                                     (database, NSSK_IMPORT_USER, LOCAL_NETWORK))
 
-        setup_statements.append("GRANT SELECT ON %s.* TO '%s'@'%s';" %
-                                (database, NSSK_IMPORT_USER, CONTAINER_NETWORK))
+        user_setup_statements.append("GRANT SELECT ON %s.* TO '%s'@'%s';" %
+                                     (database, NSSK_IMPORT_USER, CONTAINER_NETWORK))
 
     # add write access to cosmo_data for nssk-import
     # local and container networks only
     for database in DATABASES:
-        setup_statements.append("GRANT CREATE, INSERT, UPDATE, DELETE ON %s.* TO '%s'@'%s';" %
-                                (database, NSSK_IMPORT_USER, LOCAL_NETWORK))
+        user_setup_statements.append("GRANT CREATE, INSERT, UPDATE, DELETE ON %s.* TO '%s'@'%s';" %
+                                     (database, NSSK_IMPORT_USER, LOCAL_NETWORK))
 
-        setup_statements.append("GRANT CREATE, INSERT, UPDATE, DELETE ON %s.* TO '%s'@'%s';" %
-                                (database, NSSK_IMPORT_USER, CONTAINER_NETWORK))
+        user_setup_statements.append("GRANT CREATE, INSERT, UPDATE, DELETE ON %s.* TO '%s'@'%s';" %
+                                     (database, NSSK_IMPORT_USER, CONTAINER_NETWORK))
 
     # allow nssk-admin write access
     # local and container networks only
     for database in DATABASES:
-        setup_statements.append("GRANT ALL PRIVILEGES ON %s.* TO '%s'@'%s';" %
-                                (database, NSSK_ADMIN_USER, LOCAL_NETWORK))
+        user_setup_statements.append("GRANT ALL PRIVILEGES ON %s.* TO '%s'@'%s';" %
+                                     (database, NSSK_ADMIN_USER, LOCAL_NETWORK))
 
-        setup_statements.append("GRANT ALL PRIVILEGES ON %s.* TO '%s'@'%s';" %
-                                (database, NSSK_ADMIN_USER, CONTAINER_NETWORK))
+        user_setup_statements.append("GRANT ALL PRIVILEGES ON %s.* TO '%s'@'%s';" %
+                                     (database, NSSK_ADMIN_USER, CONTAINER_NETWORK))
 
     # backup user permissions
     # local and container networks only
     for database in DATABASES:
-        setup_statements.append("GRANT SELECT, SHOW VIEW, TRIGGER, LOCK TABLES, EVENT, USAGE ON %s.* TO '%s'@'%s';" %
-                                (database, NSSK_BACKUP_USER, LOCAL_NETWORK))
+        user_setup_statements.append(
+            "GRANT SELECT, SHOW VIEW, TRIGGER, LOCK TABLES, EVENT, USAGE ON %s.* TO '%s'@'%s';" %
+            (database, NSSK_BACKUP_USER, LOCAL_NETWORK))
 
-        setup_statements.append("GRANT SELECT, SHOW VIEW, TRIGGER, LOCK TABLES, EVENT, USAGE ON %s.* TO '%s'@'%s';" %
-                                (database, NSSK_BACKUP_USER, CONTAINER_NETWORK))
+        user_setup_statements.append(
+            "GRANT SELECT, SHOW VIEW, TRIGGER, LOCK TABLES, EVENT, USAGE ON %s.* TO '%s'@'%s';" %
+            (database, NSSK_BACKUP_USER, CONTAINER_NETWORK))
 
     # backup needs global process privilege
     # local and container networks only
-    setup_statements.append("GRANT PROCESS ON *.* TO '%s'@'%s';" %
-                            (NSSK_BACKUP_USER, LOCAL_NETWORK))
+    user_setup_statements.append("GRANT PROCESS ON *.* TO '%s'@'%s';" %
+                                 (NSSK_BACKUP_USER, LOCAL_NETWORK))
 
-    setup_statements.append("GRANT PROCESS ON *.* TO '%s'@'%s';" %
-                            (NSSK_BACKUP_USER, CONTAINER_NETWORK))
+    user_setup_statements.append("GRANT PROCESS ON *.* TO '%s'@'%s';" %
+                                 (NSSK_BACKUP_USER, CONTAINER_NETWORK))
 
     print("Configuration of user privileges complete")
 
@@ -222,45 +249,45 @@ def configure_users():
 def limit_remote_root_login():
     # if using a non-root user to set up database, limit that user to only logging in on that host
     if config[DB_SETUP_USER] != 'root':
-        setup_statements.append("DELETE FROM mysql.user WHERE User='%s' AND Host NOT IN "
-                                "('localhost', '127.0.0.1', '%s');" % (config[DB_SETUP_USER], CONTAINER_NETWORK))
+        user_setup_statements.append("DELETE FROM mysql.user WHERE User='%s' AND Host NOT IN "
+                                     "('localhost', '127.0.0.1', '%s');" % (config[DB_SETUP_USER], CONTAINER_NETWORK))
 
     # specifically limit root
-    setup_statements.append("DELETE FROM mysql.user WHERE User='root' AND Host NOT IN "
-                            "('localhost', '127.0.0.1', '%s');" % CONTAINER_NETWORK)
+    user_setup_statements.append("DELETE FROM mysql.user WHERE User='root' AND Host NOT IN "
+                                 "('localhost', '127.0.0.1', '%s');" % CONTAINER_NETWORK)
 
 
 def setup_cosmo_tables():
     table_template = Template(open("sql/CoSMo/nssk-cosmo-sensor-table.sql.template").read())
 
     # set the database to create the tables in
-    setup_statements.append("use %s;" % NSSK_COSMO_DB)
+    create_nssk_cosmo_tables.append("use %s;" % NSSK_COSMO_DB)
 
     for monitoring_location_id in cosmo_monitoring_location_ids:
         create_table_sql = table_template.substitute(MONITORING_LOCATION_ID=monitoring_location_id)
-        setup_statements.append(create_table_sql)
+        create_nssk_cosmo_tables.append(create_table_sql)
 
 
 def setup_cnv_rainfall_tables():
     table_template = Template(open("sql/cnv_rainfall/nssk-cnv-rainfall.sql.template").read())
 
     # set the database to create the tables in
-    setup_statements.append("use %s;" % NSSK_CNV_RF_DB)
+    create_cnv_rainfall_tables.append("use %s;" % NSSK_CNV_RF_DB)
 
     for site in cnv_rainfall_sites:
         create_table_sql = table_template.substitute(SITE=site)
-        setup_statements.append(create_table_sql)
+        create_cnv_rainfall_tables.append(create_table_sql)
 
 
 def setup_flowworks_tables():
     table_template = Template(open("sql/flowworks/nssk-flowworks.sql.template").read())
 
     # set the database to create the tables in
-    setup_statements.append("use %s;" % NSSK_FLOWWORKS_DB)
+    create_flowworks_tables.append("use %s;" % NSSK_FLOWWORKS_DB)
 
     for site in cnv_flowworks_sites:
         create_table_sql = table_template.substitute(SITE=site)
-        setup_statements.append(create_table_sql)
+        create_flowworks_tables.append(create_table_sql)
 
 
 # this may not be necessary any more
@@ -293,7 +320,6 @@ def main(args):
 
     conf_file = None
 
-    # TODO: dry run option
     if len(args) == 2:
         if args[1] == "-h" or args[1] == "-help" or args[1] == "--help":
             print(usage_msg)
@@ -349,8 +375,8 @@ def main(args):
     print("CNV Rainfall tables completed")
 
     ###########
-    # write our setup file
-    write_setup_script()
+    # write our setup script files
+    write_setup_scripts()
 
     print("Setup completed. Move your credentials file to a secure location.")
 

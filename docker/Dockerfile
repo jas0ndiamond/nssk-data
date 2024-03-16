@@ -6,7 +6,11 @@ MAINTAINER jason.a.diamond@gmail.com
 
 RUN apt-get update && apt-get install -y logrotate fail2ban less procps && apt-get clean all && rm -rf /var/lib/apt/lists/*
 
-ADD ./setup/0_nssk_setup.sql /docker-entrypoint-initdb.d
+ADD ./setup/0_create_dbs.sql /docker-entrypoint-initdb.d
+ADD ./setup/1_create_users.sql /docker-entrypoint-initdb.d
+ADD ./setup/2_create_nssk_cosmo_tables.sql /docker-entrypoint-initdb.d
+ADD ./setup/3_create_cnv_rainfall_tables.sql /docker-entrypoint-initdb.d
+ADD ./setup/4_create_flowworks_tables.sql /docker-entrypoint-initdb.d
 
 # fail2ban config for mysql
 COPY ./fail2ban/jail.local /etc/fail2ban/jail.local
