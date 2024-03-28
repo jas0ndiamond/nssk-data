@@ -9,14 +9,13 @@ class DataEntry:
     # TODO: maybe standardize on dict. defer dict creation to the import, who will have context
     def __init__(self, entry_obj):
 
-        if self._is_valid(entry_obj) is False:
-            raise "Invalid data. Cannot build data entry"
-
-        # TODO: type constraints. enforce an alphabet
+        # TODO: basic type enforcement on entry_obj
         # is indexable
         # is iterable
 
-        # at this point we have a valid entry, but still want to clean it up
+        self._validate_data(entry_obj)
+
+        # at this point basic validation has passed, but still want to clean it up
         # remove alphanumeric+ chars used in sql syntax [ ] { } | " ' ;
 
         ##################
@@ -34,12 +33,12 @@ class DataEntry:
 
         self.entry_data = entry_obj
 
-    def _is_valid(self, entry_obj):
-        # TODO: just return true
-        raise Exception("DataEntry._is_valid not implemented in subclass")
+    def _validate_data(self, entry_obj):
+        # require override, even if the overrider just returns true
+        raise RuntimeError("DataEntry._is_valid not implemented in subclass")
 
     def get_db_destination(self):
-        raise Exception("DataEntry.get_db_destination not implemented in subclass")
+        raise RuntimeError("DataEntry.get_db_destination not implemented in subclass")
 
     def get(self, field_name):
         return self.entry_data[field_name]

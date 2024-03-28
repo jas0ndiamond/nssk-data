@@ -2,10 +2,14 @@ import csv
 import sys
 import timeit
 
+from datetime import datetime
+
 from CosmoDataEntry import CosmoDataEntry
+from src.exception.DataValidationException import DataValidationException
 from src.importer.DBImporter import DBImporter
 
 import logging
+import random
 
 ################
 # logging
@@ -26,7 +30,7 @@ logging.getLogger("DBImporter").setLevel(logging.INFO)
 
 
 # TODO: move to config file or shell param
-filename = "/home/jason/Pub/nssk-data-dumps/doi.org_10.25976_0gvo-9d12.csv"
+dump_filename = "/home/jason/Pub/nssk-data-dumps/doi.org_10.25976_0gvo-9d12.csv"
 
 # TODO: shell param for main config file
 # TODO: not just db config
@@ -185,25 +189,26 @@ def main(args):
     # no quote char
     rows_processed = 0
 
+    invalid_rows = []
+    invalid_row_count = 0
+
     db_importer = DBImporter(DB_CONFIG_FILE)
     db_importer.set_importer_name("cosmo")
     db_importer.set_schema(cosmo_schema)
 
     csvread_start_time = timeit.default_timer()
-    with open(filename, newline='', encoding='utf-8') as csvfile:
+    with open(dump_filename, newline='', encoding='utf-8') as csvfile:
         reader = csv.DictReader(csvfile, delimiter=',', strict=True)
 
         field_names = reader.fieldnames
 
-        logger.info("CSV file schema:")
         # schema
-        for field in field_names:
-            logger.info("\t%s" % field)
-
+        logger.info("CSV file schema: %s" % field_names)
         logger.info("------------")
 
         print("Extracting data from CSV file...")
 
+        # row is a CSV object
         for row in reader:
 
             if logger.isEnabledFor(logging.DEBUG):
@@ -212,10 +217,27 @@ def main(args):
             # narrow our incoming data here
             # want only some rows
             if want_row(row):
-                db_importer.add(CosmoDataEntry(row))
-                rows_processed += 1
+                try:
 
-                print("\r\tRows processed: %d" % rows_processed, end='', flush=True)
+                    # test random validation failures (1/1000 => .1% failure rate)
+                    # if random.randint(0, 1000) == 20:
+                    #     raise DataValidationException("Random validation failure")
+
+                    db_importer.add(CosmoDataEntry(row))
+                    rows_processed += 1
+                except Exception as e:
+
+                    # push object into collection
+                    # log collection at end to file
+
+                    logger.error("Error constructing CosmoDataEntry")
+                    logger.error(e)
+
+                    invalid_rows.append(row)
+                    invalid_row_count += 1
+
+                print("\r\tRows processed: %d. Validation failures: %d" %
+                      (rows_processed, invalid_row_count), end='', flush=True)
             else:
                 # use sparingly
                 if logger.isEnabledFor(logging.DEBUG):
@@ -223,9 +245,30 @@ def main(args):
 
     csvread_elapsed = (timeit.default_timer() - csvread_start_time)
 
-    log_msg = "\nProcessed %d rows from csv file in %.3f sec" % (rows_processed, csvread_elapsed)
+    log_msg = ("\nProcessed %d rows from dump file %s in %.3f sec. Found %d validation failures" %
+               (rows_processed, dump_filename, csvread_elapsed, invalid_row_count))
     print(log_msg, flush=True)
     logger.info(log_msg)
+
+    ################
+    # log read/parse failures here. not needed for database write
+    if invalid_row_count > 0:
+        date_time = datetime.now()
+        invalid_row_file = "./cosmo_invalid_rows_%s.log" % (date_time.strftime("%Y%m%d-%H%M%S"))
+
+        log_msg = "Found %d invalid rows. Logging to file '%s'" % (invalid_row_count, invalid_row_file)
+
+        print(log_msg)
+        logger.info(log_msg)
+
+        with open(invalid_row_file, 'w', encoding='utf-8') as filehandle:
+            for invalid_row in invalid_rows:
+                filehandle.write("%s\n" % invalid_row)
+    else:
+        log_msg = "Found no rejected rows."
+
+        print(log_msg)
+        logger.info(log_msg)
 
     ################
     # write to database
