@@ -36,14 +36,12 @@ Create a container network on the container host
 Set config values in `nssk-data/setup/generate_db_setup.py`
 * Specifically the LAN_NETWORK and CONTAINER_NETWORK
 
-Run the database setup generation script.
+Run the database setup generation script. Scripts will land in `nssk-data/docker/setup/`
 
 ```
 cd nssk-data/setup
 ../venv/bin/python3 ./generate_db_setup.py conf/config.json
 ```
-
-Creates SQL script `0_nssk_setup.sql` in `nssk-data/docker/setup/`
 
 ---
 
@@ -65,6 +63,10 @@ Next, run the start script:
 ```
 ./start.sh
 ```
+
+Check the output for confirmation that the database user setup script was successfully deleted.
+
+### Test Database Connection
 
 Test access by logging in as user `nssk` with an SQL client.
 

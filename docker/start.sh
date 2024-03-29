@@ -23,7 +23,7 @@ fi
 
 # docker run will create the mounts if they don't already exist
 
-# MySQL needs a decent about of resources.
+# MySQL needs a decent amount of resources 2 cpu + 2.5g ram
 
 # Always mount a volume for logs, even if logging is disabled.
 
@@ -53,7 +53,13 @@ docker exec -it nssk-data /etc/init.d/fail2ban start &&
 sleep 10 &&
 docker exec -it nssk-data /etc/init.d/fail2ban status &&
 echo "Removing setup script from container filesystem" &&
-docker exec -it nssk-data rm -v /docker-entrypoint-initdb.d/0_nssk_setup.sql &&
-echo "Container startup completed. Move the config file and setup script to a secure location."
+docker exec -it nssk-data rm -v /docker-entrypoint-initdb.d/1_create_users.sql
 
-# TODO: check that /docker-entrypoint-initdb.d/ is empty
+# Confirm that 1_create_users.sql was deleted from /docker-entrypoint-initdb.d/
+if docker exec -it nssk-data sh -c "test -f /docker-entrypoint-initdb.d/1_create_users.sql"; then
+  echo "WARNING: Failed to delete /docker-entrypoint-initdb.d/1_create_users.sql from container filesystem."
+else
+  echo "Successfully deleted user setup script from container filesystem"
+fi
+
+echo "Container startup completed. Move the config file and setup script to a secure location."

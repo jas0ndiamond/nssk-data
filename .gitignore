@@ -168,7 +168,9 @@ db.json
 
 conf/cosmo.json
 
-*.sql
+docker/setup/*.sql
+src/*/*.sql
+
 *.csv
 
 output

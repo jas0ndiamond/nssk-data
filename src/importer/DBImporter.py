@@ -22,6 +22,8 @@ class DBImporter:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
 
+        self.logger.info("Building DBImporter with config file %s" % db_config_file)
+
         # store the file name, read it when we're ready for the db inserts
         self.db_config_file = db_config_file
 
