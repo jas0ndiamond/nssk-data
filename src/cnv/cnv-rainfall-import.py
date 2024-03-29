@@ -22,7 +22,6 @@ logger.setLevel(logging.INFO)
 logging.getLogger("CNVRainfallDataEntry").setLevel(logging.INFO)
 logging.getLogger("DBImporter").setLevel(logging.INFO)
 
-###############
 # schema in the data dump file
 # yyyy/MM/dd HH:mm:ss
 # Air Temperature - 5 min Intervals (°C)
