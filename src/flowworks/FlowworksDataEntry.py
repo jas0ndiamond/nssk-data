@@ -39,7 +39,7 @@ class FlowworksDataEntry(DataEntry):
             # self.set('value', None)
             del self.entry_data['value']
 
-    def _is_valid(self, fields):
+    def _validate_data(self, fields):
         # no narrowing of dataset done here
         # just check for data validity
 

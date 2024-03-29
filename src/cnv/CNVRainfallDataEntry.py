@@ -1,12 +1,12 @@
 from pathlib import Path
 import sys
-import logging
 
 path_root = Path(__file__).parents[2]
 sys.path.append(str(path_root))
 
 # depends on adding src to sys.path
 from src.data.DataEntry import DataEntry
+from src.exception.DataValidationException import DataValidationException
 
 
 # yyyy/MM/dd HH:mm:ss
@@ -21,8 +21,6 @@ class CNVRainfallDataEntry(DataEntry):
     # row_obj is any structure that can be indexed and is iterable
     # csv, json, raw array
     def __init__(self, entry_obj):
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG)
 
         # raise exception if theres a problem
         super().__init__(entry_obj)
@@ -34,25 +32,44 @@ class CNVRainfallDataEntry(DataEntry):
         self.site = "CNV"
 
         ##################
-        # value buckets - some entries can be incomplete
-        if self.get('yyyy/MM/dd HH:mm:ss') == '':
-            self.set('yyyy/MM/dd HH:mm:ss', None)
+        # value buckets - these can be empty in the dump
 
         if self.get('Hourly Rainfall (mm)') == '':
             self.set('Hourly Rainfall (mm)', None)
 
-        if self.get('Rainfall (mm)') == '':
-            self.set('Rainfall (mm)', None)
-
-    def _is_valid(self, fields):
+    def _validate_data(self, fields):
         # no narrowing of dataset done here
         # just check for data validity
 
-        # max length on field data
+        if fields['Rainfall (mm)'] == '' or fields['Rainfall (mm)'] is None:
+            raise DataValidationException("Missing Rainfall (mm) [%s]" % fields['Rainfall (mm)'])
 
-        # for field in fields:
-        #     if False:
-        #         return False
+        if fields['yyyy/MM/dd HH:mm:ss'] == '' or fields['yyyy/MM/dd HH:mm:ss'] is None:
+            raise DataValidationException("Missing yyyy/MM/dd HH:mm:ss [%s]" % fields['yyyy/MM/dd HH:mm:ss'])
+
+        # TODO: type constraints. enforce an alphabet on fields where applicable
+
+        try:
+            float(fields["Air Temperature - 5 min Intervals (°C)"])
+        except Exception as e:
+            raise DataValidationException("found invalid Air Temperature - 5 min Intervals (°C) [%s]" %
+                                          fields['Air Temperature - 5 min Intervals (°C)'])
+
+        if (float(fields["Air Temperature - 5 min Intervals (°C)"]) > 80
+                or float(fields["Air Temperature - 5 min Intervals (°C)"]) < -80):
+            raise DataValidationException("found out-of-range Air Temperature - 5 min Intervals (°C) [%s]" %
+                                          fields['Air Temperature - 5 min Intervals (°C)'])
+
+        try:
+            float(fields["Barometer 5 min Intervals (mbar)"])
+        except Exception as e:
+            raise DataValidationException("found invalid Barometer 5 min Intervals (mbar) [%s]" %
+                                          fields['Barometer 5 min Intervals (mbar)'])
+
+        try:
+            float(fields["Rainfall (mm)"])
+        except Exception as e:
+            raise DataValidationException("found invalid Rainfall (mm) [%s]" % fields['Rainfall (mm)'])
 
         return True
 
