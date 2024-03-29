@@ -23,15 +23,6 @@ logging.getLogger("CNVRainfallDataEntry").setLevel(logging.INFO)
 logging.getLogger("DBImporter").setLevel(logging.INFO)
 
 ###############
-
-
-# TODO: move to config file or shell param
-filename = "/home/jason/Pub/nssk-data-dumps/NorthVancouverCityHall_export_20240215142617.csv"
-
-# TODO: shell param for main config file
-# TODO: not just db config
-DB_CONFIG_FILE = "../../conf/cnv-rainfall.json"
-
 # schema in the data dump file
 # yyyy/MM/dd HH:mm:ss
 # Air Temperature - 5 min Intervals (°C)
@@ -144,13 +135,13 @@ def main(parsed_args):
     invalid_rows = []
     invalid_row_count = 0
 
-    db_importer = DBImporter(DB_CONFIG_FILE)
+    db_importer = DBImporter(db_config_filename)
     db_importer.set_importer_name("cnv-rainfall")
     db_importer.set_schema(cnv_rainfall_dump_schema)
     db_importer.set_schema_mapping(schema_field_mapping)
 
     csvread_start_time = timeit.default_timer()
-    with open(filename, newline='', encoding='utf-8') as csvfile:
+    with open(data_dump_filename, newline='', encoding='utf-8') as csvfile:
 
         # data dump file has two metadata lines above the schema
         next(csvfile)
@@ -256,7 +247,8 @@ if __name__ == "__main__":
     ############################
 
     # reads sys.argv
-    parser = argparse.ArgumentParser(description='Import data from a CNV Rainfall data dump into a configured database.')
+    parser = argparse.ArgumentParser(
+                        description='Import data from a CNV Rainfall data dump into a configured database.')
     parser.add_argument('--dry-run', action='store_const', const=1, dest='dryrun',
                         help='Output database insert statements. Does not write to database.')
     parser.add_argument('-cfg', nargs=1, dest='db_cfg_file',
