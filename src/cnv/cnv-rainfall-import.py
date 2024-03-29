@@ -254,7 +254,7 @@ if __name__ == "__main__":
     parser.add_argument('-cfg', nargs=1, dest='db_cfg_file',
                         help='Database config file in json format. Ex: cnv-rainfall.json')
     parser.add_argument(nargs=1, dest='data_dump_file',
-                        help='CoSMo data dump file. Ex: NorthVancouverCityHall_export_20240328073312.csv')
+                        help='CNV Rainfall data dump file. Ex: NorthVancouverCityHall_export_20240328073312.csv')
 
     # call main with parsed args
     main(parser.parse_args())
