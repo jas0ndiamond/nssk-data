@@ -58,7 +58,8 @@ cd ./test/
 ../venv/bin/python3 -m unittest
 
 # Run test suite by name
-../venv/bin/python3 -m unittest CSVScrubTests.py
+../venv/bin/python3 -m unittest test_cnv_rainfall_dataentry.py
+../venv/bin/python3 -m unittest test_cosmo_dataentry.py
 ```
 
 ---
