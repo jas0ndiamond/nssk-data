@@ -24,7 +24,7 @@ python3 -m pip install wheel
 
 *  Install required pip modules:
 
-`python3 -m pip install requests mysql-connector-python`
+`python3 -m pip install requests mysql-connector-python ijson argparse`
 
 * Install datastream-py
 

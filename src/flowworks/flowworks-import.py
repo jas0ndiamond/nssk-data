@@ -1,4 +1,4 @@
-import json
+import ijson
 import argparse
 import logging
 import timeit
@@ -77,7 +77,6 @@ def want_entry(in_row):
 ##############################################
 
 def main(parsed_args):
-
     # handle parsed arguments
 
     dry_run = False
@@ -128,41 +127,40 @@ def main(parsed_args):
 
     # TODO: move to ijson. json.loads will load the entire file into memory. stupid.
     print("Extracting data from JSON file...")
-    json_data = open(data_dump_filename).read()
-    dump_data = json.loads(json_data)
 
-    json_read_start_time = timeit.default_timer()
+    with open(data_dump_filename, 'r') as filehandle:
+        # we want the "datapoints" item in the json. ijson needs "datapoints.item"
+        json_read_start_time = timeit.default_timer()
+        for entry in ijson.items(filehandle, "datapoints.item"):
 
-    for entry in dump_data["datapoints"]:
+            # narrow our incoming data here
+            # want only some rows
+            if want_entry(entry):
+                try:
 
-        # narrow our incoming data here
-        # want only some rows
-        if want_entry(entry):
-            try:
+                    # test random validation failures (1/1000 => ~.1% failure rate)
+                    # if random.randint(0, 1000) == 20:
+                    #     raise DataValidationException("Random validation failure")
 
-                # test random validation failures (1/1000 => ~.1% failure rate)
-                # if random.randint(0, 1000) == 20:
-                #     raise DataValidationException("Random validation failure")
+                    db_importer.add(FlowworksDataEntry(entry))
+                    entries_processed += 1
+                except Exception as e:
 
-                db_importer.add(FlowworksDataEntry(entry))
-                entries_processed += 1
-            except Exception as e:
+                    # push object into collection
+                    # log collection at end to file
 
-                # push object into collection
-                # log collection at end to file
+                    logger.error("Error constructing FlowworksDataEntry")
+                    logger.error(e)
 
-                logger.error("Error constructing FlowworksDataEntry")
-                logger.error(e)
+                    invalid_entry.append(entry)
+                    invalid_entry_count += 1
 
-                invalid_entry.append(entry)
-                invalid_entry_count += 1
-
-            print("\r\tEntries processed: %d. Validation failures: %d" %
-                  (entries_processed, invalid_entry_count), end='', flush=True)
-        else:
-            # use sparingly
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug("Rejecting row:\n%s\n---------", entry)
+                print("\r\tEntries processed: %d. Validation failures: %d" %
+                      (entries_processed, invalid_entry_count), end='', flush=True)
+            else:
+                # use sparingly
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug("Rejecting row:\n%s\n---------", entry)
 
     json_read_elapsed = (timeit.default_timer() - json_read_start_time)
 
@@ -220,7 +218,7 @@ if __name__ == "__main__":
 
     # reads sys.argv
     parser = argparse.ArgumentParser(
-                        description='Import data from a Flowworks data dump into a configured database.')
+        description='Import data from a Flowworks data dump into a configured database.')
     parser.add_argument('--dry-run', action='store_const', const=1, dest='dryrun',
                         help='Output database insert statements. Does not write to database.')
     parser.add_argument('-cfg', nargs=1, dest='db_cfg_file',
