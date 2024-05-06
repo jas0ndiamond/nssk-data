@@ -19,7 +19,14 @@ DB_SETUP_USER_PASS = 'setup-pass'
 NSSK_COSMO_DB = "NSSK_COSMO"
 NSSK_FLOWWORKS_DB = "NSSK_FLOWWORKS"
 NSSK_CNV_RF_DB = "NSSK_CNV_RAINFALL"
-DATABASES = [NSSK_COSMO_DB, NSSK_FLOWWORKS_DB, NSSK_CNV_RF_DB]
+NSSK_CONDUCTIVITY_RAINFALL_CORRELATION_DB = "NSSK_CONDUCTIVITY_RAINFALL_CORRELATION"
+
+DATABASES = [
+    NSSK_COSMO_DB,
+    NSSK_FLOWWORKS_DB,
+    NSSK_CNV_RF_DB,
+    NSSK_CONDUCTIVITY_RAINFALL_CORRELATION_DB
+]
 
 # TODO: add to config file?
 LOCAL_NETWORK = "192.168.%.%"
@@ -63,6 +70,12 @@ cnv_flowworks_sites = [
     "DNV"
 ]
 
+conductivity_rainfall_correlation_sites = [
+    "WAGG01",
+    "WAGG02",
+    "WAGG03"
+]
+
 #####################
 
 # Dockerfile and start.sh expect this file. do not make configurable
@@ -72,6 +85,7 @@ create_users_scriptfile = "%s1_create_users.sql" % scriptfile_target_dir
 create_nssk_cosmo_tables_scriptfile = "%s2_create_nssk_cosmo_tables.sql" % scriptfile_target_dir
 create_cnv_rainfall_tables_scriptfile = "%s3_create_cnv_rainfall_tables.sql" % scriptfile_target_dir
 create_flowworks_tables_scriptfile = "%s4_create_flowworks_tables.sql" % scriptfile_target_dir
+create_conductivity_rainfall_correlation_tables_scriptfile = "%s5_create_conductivity_rainfall_correlation_tables.sql" % scriptfile_target_dir
 
 #####################
 
@@ -81,6 +95,7 @@ user_setup_statements = []
 create_nssk_cosmo_tables = []
 create_cnv_rainfall_tables = []
 create_flowworks_tables = []
+create_conductivity_rainfall_correlation_tables = []
 
 
 #############################
@@ -105,6 +120,11 @@ def write_setup_scripts():
     print("Writing Flowworks table setup script to %s" % create_flowworks_tables_scriptfile)
     with open(create_flowworks_tables_scriptfile, 'w') as handle:
         handle.writelines("%s\n" % line for line in create_flowworks_tables)
+
+    print("Writing Generative Data table setup script to %s" %
+          create_conductivity_rainfall_correlation_tables_scriptfile)
+    with open(create_conductivity_rainfall_correlation_tables_scriptfile, 'w') as handle:
+        handle.writelines("%s\n" % line for line in create_conductivity_rainfall_correlation_tables)
 
     print("Writing setup script completed")
 
@@ -290,6 +310,18 @@ def setup_flowworks_tables():
         create_flowworks_tables.append(create_table_sql)
 
 
+def setup_conductivity_rainfall_correlation_tables():
+    # set the database to create the tables in
+    create_conductivity_rainfall_correlation_tables.append("use %s;" % NSSK_CONDUCTIVITY_RAINFALL_CORRELATION_DB)
+
+    table_template = Template(open(
+        "sql/conductivity-rainfall-correlation/conductivity-rainfall-correlation.sql.template").read())
+
+    for monitoring_location_id in conductivity_rainfall_correlation_sites:
+        create_table_sql = table_template.substitute(MONITORING_LOCATION_ID=monitoring_location_id)
+        create_conductivity_rainfall_correlation_tables.append(create_table_sql)
+
+
 # this may not be necessary any more
 # def setup_root_container_login():
 #     # let root login from container network. meant to be temporary
@@ -359,6 +391,9 @@ def main(args):
     limit_remote_root_login()
     print("NSSK users created")
 
+    ###########
+    # Core datasets
+
     # create cosmo sensor tables
     print("Creating CoSMo tables")
     setup_cosmo_tables()
@@ -373,6 +408,14 @@ def main(args):
     print("Creating CNV Rainfall tables")
     setup_cnv_rainfall_tables()
     print("CNV Rainfall tables completed")
+
+    ###########
+    # Generative and computed datasets
+
+    # create generative data tables
+    print("Creating Conductivity-Rainfall Correlation tables")
+    setup_conductivity_rainfall_correlation_tables()
+    print("Conductivity-Rainfall Correlation tables completed")
 
     ###########
     # write our setup script files
