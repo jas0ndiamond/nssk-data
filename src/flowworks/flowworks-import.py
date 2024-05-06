@@ -203,6 +203,8 @@ def main(parsed_args):
         print(log_msg, flush=True)
         logger.info(log_msg)
 
+        print("Exiting...")
+
     logger.info("Exiting...")
 
 
