@@ -12,7 +12,7 @@ from src.cnv.CNVRainfallDataEntry import CNVRainfallDataEntry
 
 
 # run with:
-# ../venv/bin/python3 -m unittest CSVScrubTests.py
+# ../venv/bin/python3 -m unittest test_cnv_rainfall_dataentry.py
 # ../venv/bin/python3 -m unittest
 
 class CNVRainfallTests(unittest.TestCase):

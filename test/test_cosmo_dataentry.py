@@ -12,7 +12,7 @@ from src.cosmo.CosmoDataEntry import CosmoDataEntry
 
 
 # run with:
-# ../venv/bin/python3 -m unittest CSVScrubTests.py
+# ../venv/bin/python3 -m unittest test_cosmo_dataentry.py
 # ../venv/bin/python3 -m unittest
 
 class CosmoTests(unittest.TestCase):
