@@ -1,8 +1,9 @@
 from mysql.connector import connect, Error, IntegrityError
 from datetime import datetime
 
-import json
 import logging
+
+from src.importer.DBConfigFactory import DBConfigFactory
 
 DEFAULT_COMMIT_SIZE = 100
 COMMIT_SIZE_MIN = 10
@@ -141,31 +142,7 @@ class DBImporter:
         if total_inserts <= 0:
             raise "no inserts to make"
 
-        # read db info from config file
-        # host
-        # port
-        # user
-        # pass
-        # database
-
-        json_data = open(self.db_config_file).read()
-        config = json.loads(json_data)
-        json_data = None
-
-        if config[CONFIG_HOST] is None:
-            raise "DB Config missing host"
-
-        if config[CONFIG_PORT] is None:
-            raise "DB Config missing port"
-
-        if config[CONFIG_USER] is None:
-            raise "DB Config missing user"
-
-        if config[CONFIG_PASS] is None:
-            raise "DB Config missing pass"
-
-        if config[CONFIG_DBASE] is None:
-            raise "DB Config missing dbase"
+        config = DBConfigFactory.build(self.db_config_file)
 
         print("Starting import...")
 
