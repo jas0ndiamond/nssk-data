@@ -166,7 +166,7 @@ config.json
 notes.txt
 db.json
 
-conf/cosmo.json
+conf/*.json
 
 docker/setup/*.sql
 src/*/*.sql
@@ -175,6 +175,6 @@ src/*/*.sql
 
 output
 
-flowworks*.json
-cnv-rainfall.json
+#flowworks*.json
+#cnv-rainfall.json
 
