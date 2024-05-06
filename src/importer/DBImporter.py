@@ -3,17 +3,12 @@ from datetime import datetime
 
 import logging
 
+from src.importer.DBConfig import DBConfig
 from src.importer.DBConfigFactory import DBConfigFactory
 
 DEFAULT_COMMIT_SIZE = 100
 COMMIT_SIZE_MIN = 10
 COMMIT_SIZE_MAX = 50000
-
-CONFIG_HOST = "host"
-CONFIG_PORT = "port"
-CONFIG_USER = "user"
-CONFIG_PASS = "pass"
-CONFIG_DBASE = "dbname"
 
 
 class DBImporter:
@@ -156,14 +151,14 @@ class DBImporter:
         # build database connection
         try:
             with connect(
-                    host=config[CONFIG_HOST],
-                    port=int(config[CONFIG_PORT]),
-                    user=config[CONFIG_USER],
-                    password=config[CONFIG_PASS],
-                    database=config[CONFIG_DBASE],
+                    host=config[DBConfig.CONFIG_HOST],
+                    port=int(config[DBConfig.CONFIG_PORT]),
+                    user=config[DBConfig.CONFIG_USER],
+                    password=config[DBConfig.CONFIG_PASS],
+                    database=config[DBConfig.CONFIG_DBASE],
             ) as connection:
 
-                config[CONFIG_PASS] = None
+                config[DBConfig.CONFIG_PASS] = None
                 config = None
 
                 try:
