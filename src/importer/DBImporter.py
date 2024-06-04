@@ -123,6 +123,8 @@ class DBImporter:
 
         self.inserts.append(statement)
 
+        #TODO call execute if inserts grows to large
+
     # dump our inserts. for debugging
     def dump(self):
 
@@ -135,7 +137,7 @@ class DBImporter:
         total_inserts = len(self.inserts)
 
         if total_inserts <= 0:
-            raise "no inserts to make"
+            raise Exception("no inserts to make")
 
         config = DBConfigFactory.build(self.db_config_file)
 

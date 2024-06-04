@@ -40,6 +40,9 @@ class DataEntry:
     def get_db_destination(self):
         raise RuntimeError("DataEntry.get_db_destination not implemented in subclass")
 
+    def set_db_destination(self, destination):
+        raise RuntimeError("DataEntry.set_db_destination not implemented in subclass")
+
     def get(self, field_name):
         return self.entry_data[field_name]
 
@@ -47,6 +50,7 @@ class DataEntry:
         return self.entry_data[field_name] is not None
 
     def set(self, field_name, value):
+        # TODO require field name to be present?
         self.entry_data[field_name] = value
 
     def _get_entry_data(self):
