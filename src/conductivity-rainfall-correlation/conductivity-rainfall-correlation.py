@@ -499,7 +499,7 @@ if __name__ == "__main__":
     # shell args
     #
     # --dry-run                                              read data dump file and output sql statements.
-    # -cfg cnv-rainfall.json                                 database config     not required
+    # -cfg conductivity-rainfall-correlation.json            database config     not required
     ############################
 
     # reads sys.argv

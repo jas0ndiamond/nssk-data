@@ -8,8 +8,7 @@ path_root = Path(__file__).parents[1]
 sys.path.append(str(path_root))
 
 # depends on adding src to sys.path
-from src.cnv.CNVRainfallDataEntry import CNVRainfallDataEntry
-
+from src.cnv_rainfall.CNVRainfallDataEntry import CNVRainfallDataEntry
 
 # run with:
 # ../venv/bin/python3 -m unittest test_cnv_rainfall_dataentry.py
