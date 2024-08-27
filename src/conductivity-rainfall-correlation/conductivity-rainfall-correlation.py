@@ -1,4 +1,5 @@
-from pprint import pprint
+# debug resource
+# from pprint import pprint
 
 from mysql.connector import connect, Error, IntegrityError
 import datetime
@@ -42,7 +43,7 @@ logging.basicConfig(filename=logFile, format='%(asctime)s [%(levelname)s] -- [%(
 logger = logging.getLogger(__name__)
 
 logger.setLevel(logging.DEBUG)
-
+logging.getLogger("ConductivityRainfallDataEntry").setLevel(logging.INFO)
 logging.getLogger("DBImporter").setLevel(logging.INFO)
 
 # time window to search for a corresponding conductivity value
@@ -381,7 +382,6 @@ def run_correlation(sensor_name, db_config_filename, db_importer):
 
                         row = cursor.fetchone()
                         while row is not None:
-
                             # COSMO_TIMESTAMP, CONDUCTANCE_RESULT, CNV_RAINFALL, CNV_TIMESTAMP
 
                             # account for a single cosmo conductance measurement correlating to
@@ -404,8 +404,6 @@ def run_correlation(sensor_name, db_config_filename, db_importer):
                             correlated_value_count += 1
 
                             print("\r\tCorrelations processed: %d" % correlated_value_count, end='', flush=True)
-
-
 
                             # grab next row
                             row = cursor.fetchone()
