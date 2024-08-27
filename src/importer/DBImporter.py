@@ -6,8 +6,8 @@ import logging
 from src.importer.DBConfig import DBConfig
 from src.importer.DBConfigFactory import DBConfigFactory
 
-DEFAULT_COMMIT_SIZE = 100
-COMMIT_SIZE_MIN = 10
+DEFAULT_COMMIT_SIZE = 1000
+COMMIT_SIZE_MIN = 100
 COMMIT_SIZE_MAX = 50000
 
 
