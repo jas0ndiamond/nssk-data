@@ -204,6 +204,7 @@ def main(parsed_args):
     db_importer = DBImporter(db_config_filename)
     db_importer.set_importer_name("cosmo")
     db_importer.set_schema(cosmo_schema)
+    db_importer.set_commit_size(10000)
 
     csvread_start_time = timeit.default_timer()
     with open(data_dump_filename, newline='', encoding='utf-8') as csvfile:
