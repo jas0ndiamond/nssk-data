@@ -43,10 +43,10 @@ Create databases to manage imported data from NSSK sources.
 
 [Setup](docker/README.md)
 
-Sources:
+Imports:
 * [CoSMo](src/cosmo/README.md)
-* Flowworks
-* CNV
+* [DNV Whitewater](src/dnv_whitewater/README.md)
+* [CNV Rainfall](src/cnv_rainfall/README.md)
 
 ---
 ## Unit Tests
