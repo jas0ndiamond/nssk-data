@@ -10,7 +10,7 @@ from src.importer.DBImporter import DBImporter
 ################
 # logging
 
-logFile = "cnv_rainfall.log"
+logFile = "cnv-rainfall.log"
 
 # init logging outside of constructor so constructed objects can access
 logging.basicConfig(filename=logFile, format='%(asctime)s [%(levelname)s] -- [%(name)s]-[%(funcName)s]: %(message)s')
@@ -135,7 +135,7 @@ def main(parsed_args):
     invalid_row_count = 0
 
     db_importer = DBImporter(db_config_filename)
-    db_importer.set_importer_name("cnv_rainfall")
+    db_importer.set_importer_name("cnv-rainfall")
     db_importer.set_schema(cnv_rainfall_dump_schema)
     db_importer.set_schema_mapping(schema_field_mapping)
 
@@ -243,7 +243,7 @@ if __name__ == "__main__":
     # shell args
     #
     # --dry-run                                              read data dump file and output sql statements.
-    # -cfg cnv_rainfall.json                                 database config     not required
+    # -cfg cnv-rainfall.json                                 database config     not required
     # NorthVancouverCityHall_export_20240328073312.csv       data dump file      required
     ############################
 
@@ -253,7 +253,7 @@ if __name__ == "__main__":
     parser.add_argument('--dry-run', action='store_const', const=1, dest='dryrun',
                         help='Output database insert statements. Does not write to database.')
     parser.add_argument('-cfg', nargs=1, dest='db_cfg_file',
-                        help='Database config file in json format. Ex: cnv_rainfall.json')
+                        help='Database config file in json format. Ex: cnv-rainfall.json')
     parser.add_argument(nargs=1, dest='data_dump_file',
                         help='CNV Rainfall data dump file. Ex: NorthVancouverCityHall_export_20240328073312.csv')
 
