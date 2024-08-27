@@ -104,27 +104,27 @@ SELECT *
 from NSSK_CNV_RAINFALL.CNV
 where NSSK_CNV_RAINFALL.CNV.BarometricPressure < 940 or NSSK_CNV_RAINFALL.CNV.BarometricPressure > 1060;
 
--- dnv flowworks
+-- dnv whitewater
 
 -- date ranges
 
 select *
-from NSSK_FLOWWORKS.DNV
-order by NSSK_FLOWWORKS.DNV.MeasurementTimestamp ASC
+from NSSK_DNV_WHITEWATER.DNV
+order by NSSK_DNV_WHITEWATER.DNV.MeasurementTimestamp ASC
 limit 5;
 
 select *
-from NSSK_FLOWWORKS.DNV
-order by NSSK_FLOWWORKS.DNV.MeasurementTimestamp DESC
+from NSSK_DNV_WHITEWATER.DNV
+order by NSSK_DNV_WHITEWATER.DNV.MeasurementTimestamp DESC
 limit 5;
 
 -- flow range
 select count(*)
-from NSSK_FLOWWORKS.DNV
-where NSSK_FLOWWORKS.DNV.FlowReading < 0 OR NSSK_FLOWWORKS.DNV.FlowReading > 100
-order by NSSK_FLOWWORKS.DNV.FlowReading ASC;
+from NSSK_DNV_WHITEWATER.DNV
+where NSSK_DNV_WHITEWATER.DNV.FlowReading < 0 OR NSSK_DNV_WHITEWATER.DNV.FlowReading > 100
+order by NSSK_DNV_WHITEWATER.DNV.FlowReading ASC;
 
 select *
-from NSSK_FLOWWORKS.DNV
-where NSSK_FLOWWORKS.DNV.FlowReading < 0 OR NSSK_FLOWWORKS.DNV.FlowReading > 100
-order by NSSK_FLOWWORKS.DNV.FlowReading ASC;
+from NSSK_DNV_WHITEWATER.DNV
+where NSSK_DNV_WHITEWATER.DNV.FlowReading < 0 OR NSSK_DNV_WHITEWATER.DNV.FlowReading > 100
+order by NSSK_DNV_WHITEWATER.DNV.FlowReading ASC;

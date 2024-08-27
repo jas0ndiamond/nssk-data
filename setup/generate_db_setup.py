@@ -17,13 +17,13 @@ DB_SETUP_USER_PASS = 'setup-pass'
 
 # TODO: add to config file? Maybe not- each has a set of tables with variable schemas
 NSSK_COSMO_DB = "NSSK_COSMO"
-NSSK_FLOWWORKS_DB = "NSSK_FLOWWORKS"
+NSSK_DNV_WHITEWATER_DB = "NSSK_DNV_WHITEWATER"
 NSSK_CNV_RF_DB = "NSSK_CNV_RAINFALL"
 NSSK_CONDUCTIVITY_RAINFALL_CORRELATION_DB = "NSSK_CONDUCTIVITY_RAINFALL_CORRELATION"
 
 DATABASES = [
     NSSK_COSMO_DB,
-    NSSK_FLOWWORKS_DB,
+    NSSK_DNV_WHITEWATER_DB,
     NSSK_CNV_RF_DB,
     NSSK_CONDUCTIVITY_RAINFALL_CORRELATION_DB
 ]
@@ -66,7 +66,7 @@ cnv_rainfall_sites = [
     "CNV"
 ]
 
-cnv_flowworks_sites = [
+dnv_whitewater_sites = [
     "DNV"
 ]
 
@@ -84,7 +84,7 @@ create_db_scriptfile = "%s0_create_dbs.sql" % scriptfile_target_dir
 create_users_scriptfile = "%s1_create_users.sql" % scriptfile_target_dir
 create_nssk_cosmo_tables_scriptfile = "%s2_create_nssk_cosmo_tables.sql" % scriptfile_target_dir
 create_cnv_rainfall_tables_scriptfile = "%s3_create_cnv_rainfall_tables.sql" % scriptfile_target_dir
-create_flowworks_tables_scriptfile = "%s4_create_flowworks_tables.sql" % scriptfile_target_dir
+create_dnv_whitewater_tables_scriptfile = "%s4_create_dnv_whitewater_tables.sql" % scriptfile_target_dir
 create_conductivity_rainfall_correlation_tables_scriptfile = "%s5_create_conductivity_rainfall_correlation_tables.sql" % scriptfile_target_dir
 
 #####################
@@ -94,7 +94,7 @@ db_setup_statements = []
 user_setup_statements = []
 create_nssk_cosmo_tables = []
 create_cnv_rainfall_tables = []
-create_flowworks_tables = []
+create_dnv_whitewater_tables = []
 create_conductivity_rainfall_correlation_tables = []
 
 
@@ -117,9 +117,9 @@ def write_setup_scripts():
     with open(create_cnv_rainfall_tables_scriptfile, 'w') as handle:
         handle.writelines("%s\n" % line for line in create_cnv_rainfall_tables)
 
-    print("Writing Flowworks table setup script to %s" % create_flowworks_tables_scriptfile)
-    with open(create_flowworks_tables_scriptfile, 'w') as handle:
-        handle.writelines("%s\n" % line for line in create_flowworks_tables)
+    print("Writing DNV Whitewater table setup script to %s" % create_dnv_whitewater_tables_scriptfile)
+    with open(create_dnv_whitewater_tables_scriptfile, 'w') as handle:
+        handle.writelines("%s\n" % line for line in create_dnv_whitewater_tables)
 
     print("Writing Generative Data table setup script to %s" %
           create_conductivity_rainfall_correlation_tables_scriptfile)
@@ -289,7 +289,7 @@ def setup_cosmo_tables():
 
 
 def setup_cnv_rainfall_tables():
-    table_template = Template(open("sql/cnv_rainfall/nssk-cnv-rainfall.sql.template").read())
+    table_template = Template(open("sql/cnv-rainfall/nssk-cnv-rainfall.sql.template").read())
 
     # set the database to create the tables in
     create_cnv_rainfall_tables.append("use %s;" % NSSK_CNV_RF_DB)
@@ -299,15 +299,15 @@ def setup_cnv_rainfall_tables():
         create_cnv_rainfall_tables.append(create_table_sql)
 
 
-def setup_flowworks_tables():
-    table_template = Template(open("sql/flowworks/nssk-flowworks.sql.template").read())
+def setup_dnv_whitewater_tables():
+    table_template = Template(open("sql/dnv-whitewater/nssk-dnv-whitewater.sql.template").read())
 
     # set the database to create the tables in
-    create_flowworks_tables.append("use %s;" % NSSK_FLOWWORKS_DB)
+    create_dnv_whitewater_tables.append("use %s;" % NSSK_DNV_WHITEWATER_DB)
 
-    for site in cnv_flowworks_sites:
+    for site in dnv_whitewater_sites:
         create_table_sql = table_template.substitute(SITE=site)
-        create_flowworks_tables.append(create_table_sql)
+        create_dnv_whitewater_tables.append(create_table_sql)
 
 
 def setup_conductivity_rainfall_correlation_tables():
@@ -399,10 +399,10 @@ def main(args):
     setup_cosmo_tables()
     print("CoSMo tables created")
 
-    # create flowworks tables
-    print("Creating Flowworks tables")
-    setup_flowworks_tables()
-    print("Flowworks tables completed")
+    # create dnv whitewater tables
+    print("Creating DNV Whitewater tables")
+    setup_dnv_whitewater_tables()
+    print("DNV Whitewater tables completed")
 
     # create cnv rainfall tables
     print("Creating CNV Rainfall tables")

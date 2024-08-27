@@ -4,7 +4,7 @@
 truncate table NSSK_CNV_RAINFALL.CNV;
 
 -- dnv flowworks
-truncate table NSSK_FLOWWORKS.DNV;
+truncate table NSSK_DNV_WHITEWATER.DNV;
 
 -- cosmo
 truncate table NSSK_COSMO.HAST01;

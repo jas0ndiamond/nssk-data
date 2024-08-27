@@ -10,7 +10,7 @@ ADD ./setup/0_create_dbs.sql /docker-entrypoint-initdb.d
 ADD ./setup/1_create_users.sql /docker-entrypoint-initdb.d
 ADD ./setup/2_create_nssk_cosmo_tables.sql /docker-entrypoint-initdb.d
 ADD ./setup/3_create_cnv_rainfall_tables.sql /docker-entrypoint-initdb.d
-ADD ./setup/4_create_flowworks_tables.sql /docker-entrypoint-initdb.d
+ADD setup/4_create_dnv_whitewater_tables.sql /docker-entrypoint-initdb.d
 ADD ./setup/5_create_conductivity_rainfall_correlation_tables.sql /docker-entrypoint-initdb.d
 
 # fail2ban config for mysql

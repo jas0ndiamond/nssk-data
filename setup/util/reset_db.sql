@@ -18,5 +18,5 @@ drop user nssk_import@'192.168.%.%';
 drop user nssk_import@'9.9.1.%';
 
 drop database NSSK_COSMO;
-drop database NSSK_FLOWWORKS;
+drop database NSSK_DNV_WHITEWATER;
 drop database NSSK_CNV_RAINFALL;

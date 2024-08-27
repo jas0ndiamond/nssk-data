@@ -175,6 +175,6 @@ src/*/*.sql
 
 output
 
-#flowworks*.json
+#dnv-whitewater*.json
 #cnv-rainfall.json
 
