@@ -20,12 +20,14 @@ NSSK_COSMO_DB = "NSSK_COSMO"
 NSSK_DNV_WHITEWATER_DB = "NSSK_DNV_WHITEWATER"
 NSSK_CNV_RF_DB = "NSSK_CNV_RAINFALL"
 NSSK_CONDUCTIVITY_RAINFALL_CORRELATION_DB = "NSSK_CONDUCTIVITY_RAINFALL_CORRELATION"
+NSSK_RAINFALL_EVENT_DATA_DB = "NSSK_RAINFALL_EVENT_DATA"
 
 DATABASES = [
     NSSK_COSMO_DB,
     NSSK_DNV_WHITEWATER_DB,
     NSSK_CNV_RF_DB,
-    NSSK_CONDUCTIVITY_RAINFALL_CORRELATION_DB
+    NSSK_CONDUCTIVITY_RAINFALL_CORRELATION_DB,
+    NSSK_RAINFALL_EVENT_DATA_DB
 ]
 
 # TODO: add to config file?
@@ -86,6 +88,7 @@ create_nssk_cosmo_tables_scriptfile = "%s2_create_nssk_cosmo_tables.sql" % scrip
 create_cnv_rainfall_tables_scriptfile = "%s3_create_cnv_rainfall_tables.sql" % scriptfile_target_dir
 create_dnv_whitewater_tables_scriptfile = "%s4_create_dnv_whitewater_tables.sql" % scriptfile_target_dir
 create_conductivity_rainfall_correlation_tables_scriptfile = "%s5_create_conductivity_rainfall_correlation_tables.sql" % scriptfile_target_dir
+create_rainfall_event_data_tables_scriptfile = "%s6_create_rainfall_event_data_tables.sql" % scriptfile_target_dir
 
 #####################
 
@@ -96,6 +99,7 @@ create_nssk_cosmo_tables = []
 create_cnv_rainfall_tables = []
 create_dnv_whitewater_tables = []
 create_conductivity_rainfall_correlation_tables = []
+create_rainfall_event_data_tables = []
 
 
 #############################
@@ -121,10 +125,15 @@ def write_setup_scripts():
     with open(create_dnv_whitewater_tables_scriptfile, 'w') as handle:
         handle.writelines("%s\n" % line for line in create_dnv_whitewater_tables)
 
-    print("Writing Generative Data table setup script to %s" %
+    print("Writing Conductivity Rainfall Correlation table setup script to %s" %
           create_conductivity_rainfall_correlation_tables_scriptfile)
     with open(create_conductivity_rainfall_correlation_tables_scriptfile, 'w') as handle:
         handle.writelines("%s\n" % line for line in create_conductivity_rainfall_correlation_tables)
+
+    print("Writing Rainfall Event Data table setup script to %s" %
+          create_rainfall_event_data_tables_scriptfile)
+    with open(create_rainfall_event_data_tables_scriptfile, 'w') as handle:
+        handle.writelines("%s\n" % line for line in create_rainfall_event_data_tables)
 
     print("Writing setup script completed")
 
@@ -322,6 +331,18 @@ def setup_conductivity_rainfall_correlation_tables():
         create_conductivity_rainfall_correlation_tables.append(create_table_sql)
 
 
+def setup_rainfall_event_data_tables():
+    # set the database to create the tables in
+    create_rainfall_event_data_tables.append("use %s;" % NSSK_RAINFALL_EVENT_DATA_DB)
+
+    table_template = Template(open(
+        "sql/rainfall-event-data/rainfall-event-data.sql.template").read())
+
+    for monitoring_location_id in cnv_rainfall_sites:
+        create_table_sql = table_template.substitute(MONITORING_LOCATION_ID=monitoring_location_id)
+        create_rainfall_event_data_tables.append(create_table_sql)
+
+
 # this may not be necessary any more
 # def setup_root_container_login():
 #     # let root login from container network. meant to be temporary
@@ -416,6 +437,10 @@ def main(args):
     print("Creating Conductivity-Rainfall Correlation tables")
     setup_conductivity_rainfall_correlation_tables()
     print("Conductivity-Rainfall Correlation tables completed")
+
+    print("Creating Rainfall Event Data tables")
+    setup_rainfall_event_data_tables()
+    print("Rainfall Event Data tables completed")
 
     ###########
     # write our setup script files

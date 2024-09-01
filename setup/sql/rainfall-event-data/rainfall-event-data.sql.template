@@ -1,0 +1,10 @@
+CREATE TABLE $MONITORING_LOCATION_ID (
+	CNVRainfallTimeStamp DATETIME,
+	RainfallAmount DECIMAL(6,3),
+	AirTemperature DECIMAL(9,7),
+	CosmoTimeStamp DATETIME,
+	Conductance DECIMAL(6,3)
+);
+
+ALTER TABLE $MONITORING_LOCATION_ID ADD UNIQUE cnvrainfalltimestamp (CNVRainfallTimeStamp);
+ALTER TABLE $MONITORING_LOCATION_ID ADD PRIMARY KEY (CNVRainfallTimeStamp);
