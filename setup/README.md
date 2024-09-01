@@ -1,6 +1,6 @@
 # NSSK Database Setup
 
-Stand up and configure a MySQL database in a docker container to house NSSK data.
+Stand up and configure a MySQL database in a docker container to store and serve NSSK data.
 
 ---
 
@@ -28,10 +28,6 @@ The setup script generates an SQL script to create and configure the following u
 ---
 
 ### Run database setup script
-
-Create a container network on the container host
-
-`docker network create --driver=bridge --subnet=9.9.1.0/24 --gateway=9.9.1.1 nssk-network`
 
 Set config values in `nssk-data/setup/generate_db_setup.py`
 * Specifically the LAN_NETWORK and CONTAINER_NETWORK
