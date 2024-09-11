@@ -125,7 +125,6 @@ def main(parsed_args):
     db_importer.set_schema(dnv_whitewater_dump_schema)
     db_importer.set_schema_mapping(schema_field_mapping)
 
-    # TODO: move to ijson. json.loads will load the entire file into memory. stupid.
     print("Extracting data from JSON file...")
 
     with open(data_dump_filename, 'r') as filehandle:
