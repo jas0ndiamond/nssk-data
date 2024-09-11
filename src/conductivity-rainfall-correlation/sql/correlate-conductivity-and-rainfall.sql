@@ -1,3 +1,5 @@
+-- for reference only
+
 SELECT
 	COSMO.COSMO_TIMESTAMP,
 	COSMO.CONDUCTANCE_RESULT,
