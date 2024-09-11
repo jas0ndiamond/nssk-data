@@ -1,6 +1,6 @@
 CREATE TABLE $MONITORING_LOCATION_ID (
 	CosmoTimeStamp DATETIME,
-	Conductance DECIMAL(6,3),
+	Conductance DECIMAL(7,3),
 	RainfallAmount DECIMAL(6,3)
 );
 
