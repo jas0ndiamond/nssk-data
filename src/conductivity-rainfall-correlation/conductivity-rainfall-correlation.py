@@ -22,7 +22,6 @@ from ConductivityRainfallDataEntry import ConductivityRainfallDataEntry
 # correlate conductivity in cosmo data with rainfall amount in cnv rainfall data
 
 # designed to run once after both cosmo-import and cnv-rainfall-import have run.
-# each run should wipe any existing table
 
 # query the cosmo data in segments. don't want to hold a massive result in memory.
 
@@ -61,10 +60,9 @@ SENSORS = [
 ]
 
 SCHEMA = [
-    "COSMO_TIMESTAMP",
-    "CONDUCTANCE_RESULT",
-    "CNV_RAINFALL",
-    "CNV_TIMESTAMP"
+    "CosmoTimeStamp",
+    "Conductance",
+    "RainfallAmount"
 ]
 
 SOURCE_DB_NSSK_COSMO = "NSSK_COSMO"
@@ -353,17 +351,17 @@ def run_correlation(sensor_name, db_config_filename, db_importer):
                         correlation_start_time = cosmo_block_start_date - datetime.timedelta(seconds=CORRELATION_WINDOW)
                         correlation_end_time = cosmo_block_end_date + datetime.timedelta(seconds=CORRELATION_WINDOW)
 
-                        # print(("==========\n" +
-                        #        "cosmo_block_start_date: %s\n" +
-                        #        "cosmo_block_end_date: %s\n" +
-                        #        "correlation_start_time: %s\n" +
-                        #        "correlation_end_time: %s"
-                        #        ) %
-                        #       (cosmo_block_start_date,
-                        #        cosmo_block_end_date,
-                        #        correlation_start_time,
-                        #        correlation_end_time)
-                        #       )
+                        print(("==========\n" +
+                               "cosmo_block_start_date: %s\n" +
+                               "cosmo_block_end_date: %s\n" +
+                               "correlation_start_time: %s\n" +
+                               "correlation_end_time: %s"
+                               ) %
+                              (cosmo_block_start_date,
+                               cosmo_block_end_date,
+                               correlation_start_time,
+                               correlation_end_time)
+                              )
 
                         ####################
                         # run correlation
@@ -373,27 +371,30 @@ def run_correlation(sensor_name, db_config_filename, db_importer):
                         # iterate and process results
                         # dump into DBImporter
                         correlation_block_query_sql = correlation_query_template.substitute(
+                            COSMO_SITE=sensor_name,
                             COSMO_START_DATETIME=cosmo_block_start_date,
                             COSMO_END_DATETIME=cosmo_block_end_date,
                             CNV_RAINFALL_START_DATETIME=correlation_start_time,
                             CNV_RAINFALL_END_DATETIME=correlation_end_time
                         )
+
+                        logger.debug("Running correlation query:\n%s", correlation_block_query_sql)
+
                         cursor.execute(correlation_block_query_sql)
 
                         row = cursor.fetchone()
                         while row is not None:
-                            # COSMO_TIMESTAMP, CONDUCTANCE_RESULT, CNV_RAINFALL, CNV_TIMESTAMP
+                            # CosmoTimeStamp, Conductance, RainfallAmount
 
                             # account for a single cosmo conductance measurement correlating to
                             # multiple cnv rainfall measurements. ex:
-                            # 2023-01-05 20:20:00, 118.0, 0.232, 2023-01-05 20:20:00
-                            # 2023-01-05 20:20:00, 118.0, 0.232, 2023-01-05 20:25:00
+                            # 2023-01-05 20:20:00, 118.0, 0.232
+                            # 2023-01-05 20:20:00, 118.0, 0.232
 
                             data_entry = {
                                 SCHEMA[0]: row[0],
                                 SCHEMA[1]: row[1],
-                                SCHEMA[2]: row[2],
-                                SCHEMA[3]: row[3]
+                                SCHEMA[2]: row[2]
                             }
 
                             new_entry = ConductivityRainfallDataEntry(data_entry)

@@ -35,22 +35,22 @@ class ConductivityRainfallDataEntry(DataEntry):
 
         ##################
         # fields comprising the timestamp
-        if fields['COSMO_TIMESTAMP'] == '' or fields['COSMO_TIMESTAMP'] is None:
-            raise DataValidationException("found invalid COSMO_TIMESTAMP [%s]" % fields['COSMO_TIMESTAMP'])
+        if fields['CosmoTimeStamp'] == '' or fields['CosmoTimeStamp'] is None:
+            raise DataValidationException("found invalid CosmoTimeStamp [%s]" % fields['CosmoTimeStamp'])
 
-        if fields['CONDUCTANCE_RESULT'] == '' or fields['CONDUCTANCE_RESULT'] is None:
-            raise DataValidationException("Found invalid CONDUCTANCE_RESULT [%s]" % fields['CONDUCTANCE_RESULT'])
+        if fields['Conductance'] == '' or fields['Conductance'] is None:
+            raise DataValidationException("Found invalid Conductance [%s]" % fields['Conductance'])
 
         # measurement name/type
-        if fields['CNV_RAINFALL'] == '' or fields['CNV_RAINFALL'] is None:
-            raise DataValidationException("Found invalid CNV_RAINFALL [%s]" % fields['CNV_RAINFALL'])
+        if fields['RainfallAmount'] == '' or fields['RainfallAmount'] is None:
+            raise DataValidationException("Found invalid RainfallAmount [%s]" % fields['RainfallAmount'])
 
         # check that conductance measurements are not negative. stored as string
-        if float(fields['CONDUCTANCE_RESULT']) < 0:
-            raise DataValidationException("Found invalid CONDUCTANCE_RESULT value [%s]" % fields['CONDUCTANCE_RESULT'])
+        if float(fields['Conductance']) < 0:
+            raise DataValidationException("Found invalid Conductance value [%s]" % fields['Conductance'])
 
-        if float(fields['CNV_RAINFALL']) < 0:
-            raise DataValidationException("Found invalid CNV_RAINFALL value [%s]" % fields['CNV_RAINFALL'])
+        if float(fields['RainfallAmount']) < 0:
+            raise DataValidationException("Found invalid RainfallAmount value [%s]" % fields['RainfallAmount'])
 
         # TODO: type constraints. enforce an alphabet on fields where applicable
         # MonitoringLocationID
