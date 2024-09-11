@@ -65,7 +65,8 @@ cosmo_monitoring_location_ids = [
 ]
 
 cnv_rainfall_sites = [
-    "CNV"
+    "WAGG01",
+    "WAGG03"
 ]
 
 dnv_whitewater_sites = [
