@@ -274,10 +274,13 @@ def get_measurement_date_windows(cursor, sensor_name):
 
     return cosmo_start_time, cosmo_end_time, cnv_rainfall_start_time, cnv_rainfall_end_time
 
-# compile the list of rainfall events according to criteria
+# compile the list of rainfall events according to criteria for a sensor site
 # the first non-zero rainfall measurement until the next 48-hour period of zero rainfall
 def compile_rainfall_events(sensor_name, db_config_filename, db_importer):
     # find the start of the rainfall data
+
+
+
     # find the first non-zero rainfall amount
     # find the end of the rainfall event
     # store event start/end
