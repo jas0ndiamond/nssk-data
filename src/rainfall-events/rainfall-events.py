@@ -1,8 +1,7 @@
 # debug resource
 # from pprint import pprint
 
-from mysql.connector import connect, Error, IntegrityError
-from datetime import datetime
+from mysql.connector import connect, Error
 from string import Template
 
 from pathlib import Path
@@ -172,7 +171,9 @@ def get_measurement_date_window(cursor):
     else:
         # TODO: custom exception
         raise Exception(
-            "Could not determine earliest rainfall measurement timestamp for site %s in target database" % SOURCE_DB_CNV_RAINFALL_SITE)
+            "Could not determine earliest rainfall measurement timestamp for site %s in target database"
+            % SOURCE_DB_CNV_RAINFALL_SITE
+        )
 
     log_msg = "Determined earliest rainfall measurement timestamp %s" % cnv_rainfall_start_time
     logger.info(log_msg)
@@ -198,7 +199,9 @@ def get_measurement_date_window(cursor):
     else:
         # TODO: custom exception
         raise Exception(
-            "Could not determine latest rainfall measurement timestamp for site %s in target database" % SOURCE_DB_CNV_RAINFALL_SITE)
+            "Could not determine latest rainfall measurement timestamp for site %s in target database"
+            % SOURCE_DB_CNV_RAINFALL_SITE
+        )
 
     log_msg = "Determined latest rainfall measurement timestamp %s" % cnv_rainfall_end_time
     logger.info(log_msg)
@@ -288,34 +291,64 @@ def determine_rainfall_event_end(cursor, rainfall_event_start_datetime, end_sear
 
         else:
             logger.info("Could not find subsequent rainfall event after dry period start")
+
+            # check for a dry period lasting between the last rainfall measurement and the end of the data set
+            dry_period_duration = int(abs((
+                next_zero_rainfall_measurement_datetime -
+                end_search_datetime
+                ).total_seconds())
+            )
+
+            if dry_period_duration > DRY_PERIOD_DURATION_THRESHOLD:
+                logger.debug(
+                    "Dataset-Ending Dry period duration following rain period %s -> %s ==> %d above threshold." %
+                    (next_zero_rainfall_measurement_datetime,
+                     end_search_datetime,
+                     dry_period_duration
+                     )
+                )
+
+                rainfall_event_end_datetime = next_zero_rainfall_measurement_datetime
+            else:
+                logger.debug(
+                    "Dataset-Ending Dry period duration following rain period " +
+                    "%s -> %s ==> %d below threshold. Continuing search." %
+                    (next_zero_rainfall_measurement_datetime,
+                     end_search_datetime,
+                     dry_period_duration
+                     )
+                )
             break
 
         #################################
-        # TODO: may need to loop this part
         # dry period duration determination. if it's over the threshold, that's the end date of the rain event
         # needs total_seconds() for seconds between datetime objects
-        dry_period_duration = abs((
-                                      next_zero_rainfall_measurement_datetime -
-                                      subsequent_rainfall_measurement_datetime
-                                  ).total_seconds())
+        dry_period_duration = int(abs((
+            next_zero_rainfall_measurement_datetime -
+            subsequent_rainfall_measurement_datetime
+            ).total_seconds())
+        )
 
         if dry_period_duration > DRY_PERIOD_DURATION_THRESHOLD:
-            logger.debug("Dry period duration for period %s -> %s ==> %d above threshold." %
-                         (next_zero_rainfall_measurement_datetime,
-                          subsequent_rainfall_measurement_datetime,
-                          dry_period_duration
-                          ))
+            logger.debug(
+                "Dry period duration following rain period %s -> %s ==> %d above threshold." %
+                (next_zero_rainfall_measurement_datetime,
+                 subsequent_rainfall_measurement_datetime,
+                 dry_period_duration)
+            )
             rainfall_event_end_datetime = next_zero_rainfall_measurement_datetime
 
             # logging start/end times of rain event done by invoker
 
             break
         else:
-            logger.debug("Dry period duration for period %s -> %s ==> %d below threshold. Continuing search." %
-                         (next_zero_rainfall_measurement_datetime,
-                          subsequent_rainfall_measurement_datetime,
-                          dry_period_duration
-                          ))
+            logger.debug(
+                "Dry period duration following rain period %s -> %s ==> %d below threshold. Continuing search." %
+                (next_zero_rainfall_measurement_datetime,
+                 subsequent_rainfall_measurement_datetime,
+                 dry_period_duration
+                 )
+            )
 
             # increment our search-from datetime to the start of the next wet period
             rainfall_datetime_i = subsequent_rainfall_measurement_datetime
@@ -347,7 +380,7 @@ def compile_rainfall_events(db_config_filename, db_importer):
                 password=config[DBConfig.CONFIG_PASS],
                 database=config[DBConfig.CONFIG_DBASE],
         ) as connection):
-            config = None
+            config[DBConfig.CONFIG_PASS] = None
 
             try:
                 with connection.cursor() as cursor:
@@ -391,14 +424,17 @@ def compile_rainfall_events(db_config_filename, db_importer):
                         cursor.execute(next_rainfall_measurement_query_sql)
                         row = cursor.fetchone()
 
-                        # TODO: none check on row
+                        if row is None:
+                            logger.info(
+                                "No next rainfall measurement found. We're likely at the end of the dataset. Bailing..."
+                            )
+                            break
 
                         # MeasurementTimestamp,Rainfall
                         rainfall_event_start_datetime = row[0]
 
                         #############
                         # find the next 48-hour period of zero rainfall
-                        # may take several tries
                         #
                         # default initialization of start + 1s as a measure to ensure the loop terminates
                         # rainfall_event_end_datetime = rainfall_event_start_datetime + datetime.timedelta(seconds=1)
@@ -409,9 +445,8 @@ def compile_rainfall_events(db_config_filename, db_importer):
 
                         # bail out early if there's no next dry period. assign end datetime to the last date
                         if rainfall_event_end_datetime is None:
-                            msg = "Rainfall end date beginning at %s is at end of dataset." % rainfall_event_start_datetime
-                            logger.info(msg)
-                            print(msg)
+                            logger.info("Rainfall end date beginning at %s is at end of dataset. Discarding." %
+                                        rainfall_event_start_datetime)
                             break
 
                         #############
@@ -428,7 +463,7 @@ def compile_rainfall_events(db_config_filename, db_importer):
                         # [event start year][event counter]
                         # i.e. 2022004 => 4th event in year 2022
 
-                        measurement_datetime_year = rainfall_event_start_datetime.year
+                        measurement_datetime_year: int = rainfall_event_start_datetime.year
 
                         # reset to 0 if it's the first event of the year, otherwise increment
                         if measurement_datetime_year == previous_measurement_datetime_year:
@@ -525,7 +560,7 @@ def main(parsed_args):
     try:
         precheck(db_config_filename)
     except Error as e:
-        print("Precheck failed. Bailing out...")
+        print("Precheck failed. Bailing out...", e)
         exit(1)
 
     print("Precheck passed. Running rainfall event compilation...")
