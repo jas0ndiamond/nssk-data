@@ -2,7 +2,7 @@
 # from pprint import pprint
 
 from mysql.connector import connect, Error, IntegrityError
-import datetime
+from datetime import datetime
 from string import Template
 
 from pathlib import Path
@@ -242,11 +242,16 @@ def determine_rainfall_event_end(cursor, rainfall_event_start_datetime, end_sear
     #   no rainfall event end date discernible. will likely change with next dataset update
 
     # TODO: query db to confirm that the measurement at rainfall_event_start_datetime is > 0. exception otherwise
+    # TODO: check start datetime is before end_search_datetime
 
     rainfall_datetime_i = rainfall_event_start_datetime
 
-    # TODO: actual end condition
+    # search for the end of the wet period in rainfall measurements.
+    # at the start of the loop, rainfall_datetime_i would be a rainfall measurement, but this may not be the case in
+    # successive iterations
     while rainfall_datetime_i <= end_search_datetime:
+
+        # find the next dry measurement
         next_no_rainfall_measurement_query_sql = next_no_rainfall_measurement_query_template.substitute(
             SEARCH_START=rainfall_datetime_i
         )
@@ -286,12 +291,13 @@ def determine_rainfall_event_end(cursor, rainfall_event_start_datetime, end_sear
             break
 
         #################################
-        # may need to loop this part
-
+        # TODO: may need to loop this part
         # dry period duration determination. if it's over the threshold, that's the end date of the rain event
+        # needs total_seconds() for seconds between datetime objects
         dry_period_duration = abs((
-                                          next_zero_rainfall_measurement_datetime -
-                                          subsequent_rainfall_measurement_datetime).seconds)
+                                      next_zero_rainfall_measurement_datetime -
+                                      subsequent_rainfall_measurement_datetime
+                                  ).total_seconds())
 
         if dry_period_duration > DRY_PERIOD_DURATION_THRESHOLD:
             logger.debug("Dry period duration for period %s -> %s ==> %d above threshold." %
@@ -422,15 +428,16 @@ def compile_rainfall_events(db_config_filename, db_importer):
                         # [event start year][event counter]
                         # i.e. 2022004 => 4th event in year 2022
 
-                        measurement_datetime_year = datetime.strptime(rainfall_event_start_datetime,
-                                                                      '%y-%m-%d %H:%M:%S').year
+                        measurement_datetime_year = rainfall_event_start_datetime.year
 
                         # reset to 0 if it's the first event of the year, otherwise increment
                         if measurement_datetime_year == previous_measurement_datetime_year:
                             event_counter += 1
                         else:
                             logger.debug("Resetting event id counter")
-                            event_counter = 0
+
+                            # 1-based indexing for events
+                            event_counter = 1
 
                         # cache measurement year to see if it changes in the next iteration
                         previous_measurement_datetime_year = measurement_datetime_year
