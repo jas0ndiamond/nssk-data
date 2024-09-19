@@ -1,0 +1,6 @@
+select MeasurementTimestamp,Rainfall
+from NSSK_CNV_RAINFALL.CNV
+where MeasurementTimestamp > "$SEARCH_START" and Rainfall > 0
+ORDER by MeasurementTimestamp
+ASC
+limit 1;
