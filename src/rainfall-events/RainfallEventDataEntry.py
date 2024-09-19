@@ -37,11 +37,11 @@ class RainfallEventDataEntry(DataEntry):
         ##################
         # fields comprising the timestamp
 
-        if fields['RAINFALL_EVENT_START_TIMESTAMP'] == '' or fields['RAINFALL_EVENT_START_TIMESTAMP'] is None:
-            raise DataValidationException("found invalid RAINFALL_EVENT_START_TIMESTAMP [%s]" % fields['RAINFALL_EVENT_START_TIMESTAMP'])
+        if fields['EVENT_START_TIMESTAMP'] == '' or fields['EVENT_START_TIMESTAMP'] is None:
+            raise DataValidationException("found invalid EVENT_START_TIMESTAMP [%s]" % fields['EVENT_START_TIMESTAMP'])
 
-        if fields['RAINFALL_EVENT_END_TIMESTAMP'] == '' or fields['RAINFALL_EVENT_END_TIMESTAMP'] is None:
-            raise DataValidationException("found invalid RAINFALL_EVENT_END_TIMESTAMP [%s]" % fields['RAINFALL_EVENT_END_TIMESTAMP'])
+        if fields['EVENT_END_TIMESTAMP'] == '' or fields['EVENT_END_TIMESTAMP'] is None:
+            raise DataValidationException("found invalid EVENT_END_TIMESTAMP [%s]" % fields['EVENT_END_TIMESTAMP'])
 
         # TODO: type constraints. enforce an alphabet on fields where applicable
         # MonitoringLocationID
