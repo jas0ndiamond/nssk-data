@@ -278,6 +278,7 @@ def get_measurement_date_windows(cursor, sensor_name):
 def run_correlation(sensor_name, db_config_filename, db_importer):
     config = DBConfigFactory.build(db_config_filename)
 
+    # TODO: check exception block messages and flow
     try:
         with (connect(
                 host=config[DBConfig.CONFIG_HOST],
