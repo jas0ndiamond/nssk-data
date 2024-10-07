@@ -1,0 +1,75 @@
+<html>
+<head>
+<title>NSSK Data Source Aggregation, Storage, and Analysis</title>
+<meta charset="UTF-8">
+<style>
+table, th, td {
+  border: 1px solid blue;
+  border-collapse: collapse;
+  width: 720px;
+}
+th {
+    text-align: center;
+}
+td {
+    text-align: left;
+    padding-left: 4px;
+    padding-right: 4px;
+    white-space: nowrap;
+}
+hr {
+    height: 4px;
+    background-color: blue;
+}
+body {
+    background-color: #e0e0eb;
+    width: 1200px;
+}
+</style>
+</head>
+<body style=””>
+
+
+<img src="./nssk-banner.png"/><br>
+<hr>
+
+NSSK Data Source Aggregation, Storage, and Analysis
+
+<hr>
+<h3>CNV Rainfall</h3>
+City of North Vancouver rainfall data from Flowworks<br>
+$CNV_RAINFALL_BLOCK
+
+<hr>
+<h3>DNV Whitewater</h3>
+District of North Vancouver water flow data from Flowworks<br>
+$DNV_WHITEWATER_BLOCK
+
+<hr>
+<h3>CoSMo</h3>
+DFO PSEC Community Stream Monitoring (CoSMo)<br>
+$COSMO_BLOCK
+
+<hr>
+<h3>Conductivity-Rainfall Correlation</h3>
+Conductivity-Rainfall Correlation for CoSMo Sites<br>
+$CONDUCTIVITY_RAINFALL_CORRELATION_BLOCK
+
+<hr>
+<h3>Rainfall Events</h3>
+Rainfall Events occurring in CNV/DNV area<br>
+$RAINFALL_EVENTS_BLOCK
+
+<hr>
+<h3>Rainfall Event Data</h3>
+Rainfall Event Data occurring in CNV/DNV area<br>
+$RAINFALL_EVENTS_BLOCK
+
+<hr>
+
+North Shore Stream Keepers 2024<br>
+Report problems, requests, suggestions, and questions to Jason<br>
+<a href="https://www.nssk.ca">NSSK</a>
+
+</body>
+</html>
