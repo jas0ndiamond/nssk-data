@@ -18,7 +18,9 @@ from src.exception.DataValidationException import DataValidationException
 # database is determined externally
 # site is determined externally
 
-class RainfallEventDataEntry(DataEntry):
+# TODO: better name
+
+class RainfallEventDataDataEntry(DataEntry):
 
     # row_obj is any structure that can be indexed and is iterable
     # csv, json, raw array
