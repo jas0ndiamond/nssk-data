@@ -1,5 +1,6 @@
 import pprint
 import re
+from datetime import datetime
 
 
 class DataEntry:
@@ -22,14 +23,28 @@ class DataEntry:
         # scrub invalid characters from values
         # [ #$%[]{},"'| ]
 
+        # TODO: make static
         scrub_pattern = re.compile(r'[\[\]\'\"\$\#\@\!\{\}\,\|]')
 
         for field in entry_obj:
-            value = str(entry_obj[field])
+            if entry_obj[field] is None:
+                # if it's a None, rely on subclass to validate if None values are acceptable for field
+                continue
+            elif type(entry_obj[field]) == str:
+                value = str(entry_obj[field])
 
-            value = re.sub(scrub_pattern, '', value)
+                value = re.sub(scrub_pattern, '', value)
 
-            entry_obj[field] = value
+                entry_obj[field] = value
+            elif type(entry_obj[field]) == float or type(entry_obj[field]) == int:
+                # no scrubbing
+                pass
+            elif type(entry_obj[field] == datetime):
+                pass
+                # no scrubbing
+            else:
+                # no scrubbing
+                pass
 
         self.entry_data = entry_obj
 

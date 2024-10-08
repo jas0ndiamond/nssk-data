@@ -1,5 +1,5 @@
 # debug resource
-# from pprint import pprint
+from pprint import pprint
 
 from mysql.connector import connect, Error, IntegrityError
 import datetime
@@ -17,7 +17,7 @@ sys.path.append(str(path_root))
 from src.importer.DBImporter import DBImporter
 from src.importer.DBConfig import DBConfig
 from src.importer.DBConfigFactory import DBConfigFactory
-from RainfallEventDataEntry import RainfallEventDataEntry
+from RainfallEventMeasurementsDataEntry import RainfallEventMeasurementsDataEntry
 
 # compile rainfall event data for the cnv region
 
@@ -44,36 +44,36 @@ logging.basicConfig(filename=logFile, format='%(asctime)s [%(levelname)s] -- [%(
 logger = logging.getLogger(__name__)
 
 logger.setLevel(logging.DEBUG)
-logging.getLogger("RainfallEventDataEntry").setLevel(logging.INFO)
+logging.getLogger("RainfallEventMeasurementsDataEntry").setLevel(logging.INFO)
 logging.getLogger("DBImporter").setLevel(logging.INFO)
 
 # time window to search for a corresponding conductivity value
 # +/- 5 minutes. in seconds
 CORRELATION_WINDOW = 5 * 60
 
-# increment to step through conductivity values in COSMO table
-# shouldn't be too big
-# 7 days
-CORRELATION_INCREMENT = 60 * 60 * 24 * 7
-
-SENSORS = [
+COSMO_SENSOR_SITES = [
     "WAGG01",
     "WAGG03"
 ]
 
 SCHEMA = [
-    "CNV_RAINFALL_TIMESTAMP",
-    "CNV_RAINFALL_RAINFALL_AMT",
-    "CNV_RAINFALL_AIR_TEMPERATURE",
-    "COSMO_TIMESTAMP",
-    "COSMO_CONDUCTANCE_RESULT"
+    RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD,
+    RainfallEventMeasurementsDataEntry.CNV_RAINFALL_AMOUNT_FIELD,
+    RainfallEventMeasurementsDataEntry.CNV_AIR_TEMPERATURE_FIELD,
+    RainfallEventMeasurementsDataEntry.COSMO_CONDUCTANCE_RESULT_FIELD,
+    RainfallEventMeasurementsDataEntry.DNV_WHITEWATER_FLOW_READING_FIELD,
+    RainfallEventMeasurementsDataEntry.RAINFALL_EVENT_ID_FIELD
 ]
 
 SOURCE_DB_NSSK_COSMO = "NSSK_COSMO"
 SOURCE_DB_CNV_RAINFALL = "NSSK_CNV_RAINFALL"
+SOURCE_DB_DNV_WHITEWATER = "NSSK_DNV_WHITEWATER"
 
 # only one site in dataset
 SOURCE_DB_CNV_RAINFALL_SITE = "CNV"
+
+# only one site in dataset
+SOURCE_DB_DNV_WHITEWATER_SITE = "DNV"
 
 TARGET_DATABASE = None
 
@@ -96,7 +96,8 @@ def precheck(conf_file):
                 database=config[DBConfig.CONFIG_DBASE],
         ) as connection:
             target_db = config[DBConfig.CONFIG_DBASE]
-            config = None
+            config[DBConfig.CONFIG_USER] = None
+            config[DBConfig.CONFIG_PASS] = None
 
             try:
                 with connection.cursor() as cursor:
@@ -136,7 +137,7 @@ def precheck(conf_file):
                         logger.debug("Found source database %s" % SOURCE_DB_CNV_RAINFALL)
 
                     # check that our destination tables exist
-                    for sensor in SENSORS:
+                    for sensor in COSMO_SENSOR_SITES:
                         logger.debug("Precheck Sensor %s" % sensor)
 
                         cursor.reset()
@@ -158,137 +159,209 @@ def precheck(conf_file):
         logger.error("Error connecting to database", e)
 
 
-# return start and end dates for cosmo conductivity, and cnv rainfall measurements
-def get_measurement_date_windows(cursor, sensor_name):
-    ###################
-    # determine cosmo start datetime (earliest conductivity measurement)
-    # cosmo datetimes are split across date and time fields
+def load_rainfall_event_intervals(cursor):
+    events = []
 
-    cosmo_date_search_template = Template(open("sql/get-cosmo-timestamp.sql.template").read())
-    cosmo_date_search_sql = cosmo_date_search_template.substitute(DB=SOURCE_DB_NSSK_COSMO,
-                                                                  SITE=sensor_name,
-                                                                  ORDER="ASC")
+    rainfall_events_sql = open("../rainfall-event-data/sql/get-rainfall-events.sql").read()
 
-    logger.debug("cosmo start date search sql:\n%s" % cosmo_date_search_sql)
+    cursor.execute(rainfall_events_sql)
 
-    cursor.execute(cosmo_date_search_sql)
-    row = cursor.fetchall()
-    if cursor.rowcount == 1:
-        # expect date in mysq datetime format
-        print("raw start datetime: %s" % row[0][0])
+    row = cursor.fetchone()
+    while row is not None:
+        logger.debug("Retrieved rainfall event [%s] => [%s]: %s" % (row[0], row[1], row[2]))
+        events.append([row[0], row[1], row[2]])
+        row = cursor.fetchone()
 
-        # pprint(row[0])
+    return events
 
-        # row[0] is a tuple containing a datetime, get value with row[0][0]
-        cosmo_start_time = row[0][0]
+
+# load the rainfall data for the given time interval. return a list of tuples that will be used in correlation steps.
+def load_cnv_rainfall_data(cursor, start_datetime, end_datetime):
+    cnv_rainfall_template = Template(
+        open("../rainfall-event-data/sql/get-cnv-data-for-rainfall-event.sql.template").read())
+
+    get_cnv_rainfall_data_query_sql = cnv_rainfall_template.substitute(
+        CNV_RAINFALL_START_DATETIME=start_datetime,
+        CNV_RAINFALL_END_DATETIME=end_datetime,
+        SITE=SOURCE_DB_CNV_RAINFALL_SITE
+    )
+
+    cursor.execute(get_cnv_rainfall_data_query_sql)
+
+    row = cursor.fetchone()
+
+    data = []
+
+    # TODO: error/exception on None check
+    while row is not None:
+        data.append(
+            {
+                RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD: row[0],
+                RainfallEventMeasurementsDataEntry.CNV_RAINFALL_AMOUNT_FIELD: float(row[1]),
+                RainfallEventMeasurementsDataEntry.CNV_AIR_TEMPERATURE_FIELD: float(row[2])
+            }
+        )
+
+        row = cursor.fetchone()
+
+    return data
+
+
+def correlate_with_cosmo_conductance(cursor, sensor_site, cnv_rainfall_timestamp):
+    logger.debug("Attempting to correlate a CoSMo measurement with CNV Rainfall timestamp %s for site %s"
+                 % (cnv_rainfall_timestamp, sensor_site))
+
+    # default measurement is a tuple with None values for measurement timestamp and value
+    correlated_measurement = (None, None)
+
+    search_cosmo_start_datetime = cnv_rainfall_timestamp - datetime.timedelta(
+        seconds=CORRELATION_WINDOW)
+    search_cosmo_end_datetime = cnv_rainfall_timestamp + datetime.timedelta(
+        seconds=CORRELATION_WINDOW)
+
+    cosmo_conductance_template = Template(
+        open("../rainfall-event-data/sql/get-cosmo-data-for-rainfall-event.sql.template").read()
+    )
+
+    cosmo_conductance_query_sql = cosmo_conductance_template.substitute(
+        COSMO_START_DATETIME=search_cosmo_start_datetime,
+        COSMO_END_DATETIME=search_cosmo_end_datetime,
+        COSMO_SITE=sensor_site
+    )
+
+    cursor.execute(cosmo_conductance_query_sql)
+
+    row = cursor.fetchone()
+
+    # there may not always be a correlated measurement
+    if row is not None:
+        # determine best result
+
+        best_measurement_timestamp = None
+        best_measurement_value = None
+
+        # in seconds
+        closest_timestamp_distance = 999999
+
+        while row is not None:
+
+            # check if the timestamp in this row is better
+            if best_measurement_timestamp is None:
+                best_measurement_timestamp = row[0]
+                best_measurement_value = float(row[1])
+            else:
+                timestamp_distance = int(abs((cnv_rainfall_timestamp - row[0]).total_seconds()))
+
+                # is this measurement is closer to the cnv_timestamp than the existing best measurement?
+                if timestamp_distance < closest_timestamp_distance:
+
+                    best_measurement_timestamp = row[0]
+                    best_measurement_value = float(row[1])
+
+                    logger.debug("Found new best CoSMo measurement %s => %s." %
+                                 (best_measurement_timestamp, best_measurement_value))
+
+                    closest_timestamp_distance = timestamp_distance
+                else:
+                    # this measurement is not closer to the cnv timestamp than the existing best measurement
+                    logger.debug("Sticking with existing best CoSMo measurement. Continuing...")
+
+            row = cursor.fetchone()
+
+        if best_measurement_timestamp is not None and best_measurement_value is not None:
+            correlated_measurement = (best_measurement_timestamp, best_measurement_value)
+        else:
+            msg = "Error correlating CoSMo measurement to CNV Timestamp"
+            logger.error(msg)
+            raise Exception(msg)
     else:
-        # TODO: custom exception
-        raise Exception(
-            "Could not determine earliest conductivity measurement timestamp for site %s in target database" %
-            sensor_name)
+        # no measurement in search window
+        # logging here might be noisy given that there will be gaps in measurements
+        pass
 
-    log_msg = "Determined earliest conductivity measurement timestamp %s" % cosmo_start_time
-    logger.info(log_msg)
-    print(log_msg)
+    return correlated_measurement
 
-    # determine end datetime (most recent conductivity measurement)
-    # cosmo datetimes are split across date and time fields
 
-    cosmo_date_search_sql = cosmo_date_search_template.substitute(DB=SOURCE_DB_NSSK_COSMO,
-                                                                  SITE=sensor_name,
-                                                                  ORDER="DESC")
+# return a dnv whitewater flow reading within the correlation threshold for cnv_timestamp.
+# if multiple results in the search window are returned from the database, return the one nearest to the cnv_timestamp
+def correlate_with_dnv_flow_reading(cursor, cnv_rainfall_timestamp):
+    logger.debug("Attempting to correlate a DNV Whitewater measurement with CNV Rainfall timestamp %s"
+                 % cnv_rainfall_timestamp)
 
-    logger.debug("cosmo end date search sql:\n%s" % cosmo_date_search_sql)
+    # default measurement is a tuple with None values for measurement timestamp and value
+    correlated_measurement = (None, None)
 
-    cursor.execute(cosmo_date_search_sql)
-    row = cursor.fetchall()
-    if cursor.rowcount == 1:
-        # row[0] is a tuple containing a datetime, get value with row[0][0]
-        cosmo_end_time = row[0][0]
+    # limited to 600 results
+    dnv_whitewater_template = Template(
+        open("../rainfall-event-data/sql/get-dnv-whitewater-data-for-rainfall-event.sql.template").read())
+
+    search_dnv_whitewater_start_datetime = cnv_rainfall_timestamp - datetime.timedelta(
+        seconds=CORRELATION_WINDOW)
+    search_dnv_whitewater_end_datetime = cnv_rainfall_timestamp + datetime.timedelta(
+        seconds=CORRELATION_WINDOW)
+
+    get_dnv_whitewater_query_sql = dnv_whitewater_template.substitute(
+        DNV_WHITEWATER_START_DATETIME=search_dnv_whitewater_start_datetime,
+        DNV_WHITEWATER_END_DATETIME=search_dnv_whitewater_end_datetime,
+        SITE=SOURCE_DB_DNV_WHITEWATER_SITE
+    )
+
+    cursor.execute(get_dnv_whitewater_query_sql)
+
+    row = cursor.fetchone()
+
+    # there may not always be a correlated measurement
+    if row is not None:
+
+        # determine best result
+
+        best_measurement_timestamp = None
+        best_measurement_value = None
+
+        # in seconds
+        closest_timestamp_distance = 999999
+
+        while row is not None:
+
+            # check if the timestamp in this row is better
+            if best_measurement_timestamp is None:
+                best_measurement_timestamp = row[0]
+                best_measurement_value = float(row[1])
+            else:
+                timestamp_distance = int(abs((cnv_rainfall_timestamp - row[0]).total_seconds()))
+
+                # is this measurement is closer to the cnv_timestamp than the existing best measurement?
+                if timestamp_distance < closest_timestamp_distance:
+
+                    best_measurement_timestamp = row[0]
+                    best_measurement_value = float(row[1])
+
+                    logger.debug("Found new best DNV Whitewater measurement %s => %s." %
+                                 (best_measurement_timestamp, best_measurement_value))
+
+                    closest_timestamp_distance = timestamp_distance
+                else:
+                    # this measurement is not closer to the cnv timestamp than the existing best measurement
+                    logger.debug("Sticking with existing best DNV Whitewater measurement. Continuing...")
+
+            row = cursor.fetchone()
+
+        if best_measurement_timestamp is not None and best_measurement_value is not None:
+            correlated_measurement = (best_measurement_timestamp, best_measurement_value)
+        else:
+            msg = "Error correlating DNV Whitewater measurement to CNV Timestamp"
+            logger.error(msg)
+            raise Exception(msg)
     else:
-        # TODO: custom exception
-        raise Exception(
-            "Could not determine latest conductivity measurement timestamp for site %s in target database" % sensor_name)
+        # no measurement in search window
+        # logging here might be noisy given that there will be gaps in measurements
+        pass
 
-    log_msg = "Determined latest conductivity measurement timestamp %s" % cosmo_end_time
-    logger.info(log_msg)
-    print(log_msg)
+    return correlated_measurement
 
-    ###################
-    # determine cnv rainfall start datetime (earliest measurement)
-
-    cnv_rainfall_date_search_template = Template(open("sql/get-cnv-rainfall-timestamp.sql.template").read())
-    cnv_rainfall_date_search_sql = cnv_rainfall_date_search_template.substitute(DB=SOURCE_DB_CNV_RAINFALL,
-                                                                                SITE=SOURCE_DB_CNV_RAINFALL_SITE,
-                                                                                ORDER="ASC")
-
-    logger.debug("cnv rainfall start date search sql:\n%s" % cnv_rainfall_date_search_sql)
-
-    cursor.execute(cnv_rainfall_date_search_sql)
-    row = cursor.fetchall()
-    if cursor.rowcount == 1:
-        # expect date in mysq datetime format
-
-        # pprint(row[0])
-
-        # row[0] is a tuple containing a datetime, get value with row[0][0]
-        cnv_rainfall_start_time = row[0][0]
-    else:
-        # TODO: custom exception
-        raise Exception(
-            "Could not determine earliest rainfall measurement timestamp for site %s in target database" % SOURCE_DB_CNV_RAINFALL_SITE)
-
-    log_msg = "Determined earliest rainfall measurement timestamp %s" % cnv_rainfall_start_time
-    logger.info(log_msg)
-    print(log_msg)
-
-    # determine end datetime (most recent rainfall measurement)
-
-    cnv_rainfall_date_search_sql = cnv_rainfall_date_search_template.substitute(DB=SOURCE_DB_CNV_RAINFALL,
-                                                                                SITE=SOURCE_DB_CNV_RAINFALL_SITE,
-                                                                                ORDER="DESC")
-
-    logger.debug("cnv rainfall end date search sql:\n%s" % cnv_rainfall_date_search_sql)
-
-    cursor.execute(cnv_rainfall_date_search_sql)
-    row = cursor.fetchall()
-    if cursor.rowcount == 1:
-        # expect date in mysq datetime format
-
-        # pprint(row[0])
-
-        # row[0] is a tuple containing a datetime, get value with row[0][0]
-        cnv_rainfall_end_time = row[0][0]
-    else:
-        # TODO: custom exception
-        raise Exception(
-            "Could not determine latest rainfall measurement timestamp for site %s in target database" % SOURCE_DB_CNV_RAINFALL_SITE)
-
-    log_msg = "Determined latest rainfall measurement timestamp %s" % cnv_rainfall_end_time
-    logger.info(log_msg)
-    print(log_msg)
-
-    #############
-    # done with the supplied cursor
-    cursor.reset()
-
-    return cosmo_start_time, cosmo_end_time, cnv_rainfall_start_time, cnv_rainfall_end_time
-
-# compile the list of rainfall events according to criteria for a sensor site
-# the first non-zero rainfall measurement until the next 48-hour period of zero rainfall
-def compile_rainfall_events(sensor_name, db_config_filename, db_importer):
-    # find the start of the rainfall data
-
-
-
-    # find the first non-zero rainfall amount
-    # find the end of the rainfall event
-    # store event start/end
-    # repeat
-    pass
 
 # compile fields to comprise a rainfall event, with rainfall events known
-def compile_event_data(sensor_name, db_config_filename, db_importer):
+def compile_rainfall_event_data(db_config_filename, db_importer):
     config = DBConfigFactory.build(db_config_filename)
 
     try:
@@ -297,144 +370,113 @@ def compile_event_data(sensor_name, db_config_filename, db_importer):
                 port=int(config[DBConfig.CONFIG_PORT]),
                 user=config[DBConfig.CONFIG_USER],
                 password=config[DBConfig.CONFIG_PASS],
-                database=config[DBConfig.CONFIG_DBASE],
+                database=config[DBConfig.CONFIG_DBASE]
         ) as connection):
-            config = None
+            config[DBConfig.CONFIG_PASS] = None
+            config[DBConfig.CONFIG_USER] = None
+
+            # open a connection to the database host
+            # we can reuse the cursor so long as each template specifies the database for every table. good practice.
 
             try:
                 with connection.cursor() as cursor:
 
-                    (cosmo_start_time,
-                     cosmo_end_time,
-                     cnv_rainfall_start_time,
-                     cnv_rainfall_end_time) = get_measurement_date_windows(cursor, sensor_name)
+                    # for each sensor
+                    #   for each distinct rainfall event id in the rainfall events table
+                    #       create dataentry object
+                    #       get start/end dates of event
+                    #       populate rainfall and air temperatures within date range
+                    #       correlate cosmo conductance data with cnv timestamps within date range
+                    #       correlate dnv whitewater data with cnv timestamps within date range
 
-                    ###################
-                    # date determinations
+                    # [start_timestamp, end_timestamp, event_id]
+                    rainfall_events = load_rainfall_event_intervals(cursor)
 
-                    print(("==========\n" +
-                           "cosmo_start_time: %s\n" +
-                           "cosmo_end_time: %s\n" +
-                           "cnv_rainfall_start_time: %s\n" +
-                           "cnv_rainfall_end_time: %s"
-                           ) %
-                          (cosmo_start_time,
-                           cosmo_end_time,
-                           cnv_rainfall_start_time,
-                           cnv_rainfall_end_time)
-                          )
+                    compiled_measurement_count = 0
 
-                    # TODO dynamically determine the outer interval from these 4 dates
-                    # have to start at the latest of first cosmo conductivity/cnv rainfall readings
-                    # have to end at the earliest of last cosmo conductivity/cnv rainfall readings
-                    # for now, consider the cosmo dates as the determiner of the outer interval and
-                    # leave the extra processing on the table
+                    event_compilation_processing_start_time = timeit.default_timer()
+                    for rainfall_event in rainfall_events:
+                        (start_datetime, end_datetime, event_id) = rainfall_event
 
-                    ###################
-                    # correlation
+                        compiled_event_data = {}
 
-                    correlation_query_template = Template(
-                        open("sql/correlate-conductivity-and-rainfall.sql.template").read())
+                        # {CNV_TIMESTAMP_FIELD, CNV_RAINFALL_AMOUNT_FIELD, CNV_AIRTEMP_FIELD}
+                        for cnv_rainfall_measurement in load_cnv_rainfall_data(cursor, start_datetime, end_datetime):
 
-                    # TODO how hard do we want to lean on the query for this?
-                    #
+                            # pprint(cnsv_rainfall_measurement)
 
-                    # resolve conductivity values for times in the sensor table
+                            # set rainfall event id
+                            compiled_event_data[
+                                RainfallEventMeasurementsDataEntry.RAINFALL_EVENT_ID_FIELD
+                            ] = event_id
 
-                    # new or update? => always new, note duplicates and check measurement differences
+                            # retrieve cnv measurement data
+                            compiled_event_data[
+                                RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD
+                            ] = cnv_rainfall_measurement.get(
+                                RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD)
 
-                    correlated_value_count = 0
+                            compiled_event_data[
+                                RainfallEventMeasurementsDataEntry.CNV_RAINFALL_AMOUNT_FIELD
+                            ] = cnv_rainfall_measurement.get(
+                                RainfallEventMeasurementsDataEntry.CNV_RAINFALL_AMOUNT_FIELD)
 
-                    # cosmo_block_query = Template(open("sql/cosmo-block-query.sql.template").read())
+                            compiled_event_data[
+                                RainfallEventMeasurementsDataEntry.CNV_AIR_TEMPERATURE_FIELD
+                            ] = cnv_rainfall_measurement.get(
+                                RainfallEventMeasurementsDataEntry.CNV_AIR_TEMPERATURE_FIELD)
 
-                    cosmo_date_i = cosmo_start_time
+                            # correlate dnv whitewater flow reading with cnv rainfall measurement
 
-                    correlation_processing_start_time = timeit.default_timer()
+                            # (timestamp, value)
+                            (correlated_flow_timestamp, correlated_flow_value) = correlate_with_dnv_flow_reading(
+                                cursor,
+                                cnv_rainfall_measurement.get(RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD)
+                            )
 
-                    # for each cosmo conductivity measurement in our cosmo data, in time chunks of CORRELATION_INCREMENT
-                    while cosmo_date_i <= cosmo_end_time:
-                        # retrieve a block of sensor data.
-                        # should be okay if end date is past cosmo_end_time- nothing will be pulled from the db
-                        # start: cosmo_date_i
-                        # end: cosmo_date_i + CORRELATION_INCREMENT
-                        cosmo_block_start_date = cosmo_date_i
-                        cosmo_block_end_date = cosmo_date_i + datetime.timedelta(seconds=CORRELATION_INCREMENT)
+                            compiled_event_data[
+                                RainfallEventMeasurementsDataEntry.DNV_WHITEWATER_FLOW_READING_FIELD
+                            ] = correlated_flow_value
 
-                        # retrieve the cnv rainfall data for the corresponding date range, +/- CORRELATION_WINDOW
-                        correlation_start_time = cosmo_block_start_date - datetime.timedelta(seconds=CORRELATION_WINDOW)
-                        correlation_end_time = cosmo_block_end_date + datetime.timedelta(seconds=CORRELATION_WINDOW)
+                            # correlate conductance measurements with cnv rainfall measurement for each site
+                            for sensor_site in COSMO_SENSOR_SITES:
+                                # Need to set sensor site as destination in DataEntry object
+                                # even if no conductance value can be correlated
 
-                        # print(("==========\n" +
-                        #        "cosmo_block_start_date: %s\n" +
-                        #        "cosmo_block_end_date: %s\n" +
-                        #        "correlation_start_time: %s\n" +
-                        #        "correlation_end_time: %s"
-                        #        ) %
-                        #       (cosmo_block_start_date,
-                        #        cosmo_block_end_date,
-                        #        correlation_start_time,
-                        #        correlation_end_time)
-                        #       )
+                                (conductance_timestamp, conductance_value) = correlate_with_cosmo_conductance(
+                                    cursor,
+                                    sensor_site,
+                                    cnv_rainfall_measurement.get(RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD)
+                                )
 
-                        ####################
-                        # run correlation
-                        #
-                        # build query from template
-                        # run query
-                        # iterate and process results
-                        # dump into DBImporter
-                        correlation_block_query_sql = correlation_query_template.substitute(
-                            COSMO_START_DATETIME=cosmo_block_start_date,
-                            COSMO_END_DATETIME=cosmo_block_end_date,
-                            CNV_RAINFALL_START_DATETIME=correlation_start_time,
-                            CNV_RAINFALL_END_DATETIME=correlation_end_time
-                        )
-                        cursor.execute(correlation_block_query_sql)
+                                # each sensor needs its own copy of compiled_event_data
+                                final_compiled_event_data = compiled_event_data.copy()
 
-                        row = cursor.fetchone()
-                        while row is not None:
-                            # COSMO_TIMESTAMP, CONDUCTANCE_RESULT, CNV_RAINFALL, CNV_TIMESTAMP
+                                final_compiled_event_data[
+                                  RainfallEventMeasurementsDataEntry.COSMO_CONDUCTANCE_RESULT_FIELD
+                                ] = conductance_value
 
-                            # account for a single cosmo conductance measurement correlating to
-                            # multiple cnv rainfall measurements. ex:
-                            # 2023-01-05 20:20:00, 118.0, 0.232, 2023-01-05 20:20:00
-                            # 2023-01-05 20:20:00, 118.0, 0.232, 2023-01-05 20:25:00
+                                logger.debug("Final compiled event data entry: %s" % final_compiled_event_data)
 
-                            data_entry = {
-                                SCHEMA[0]: row[0],
-                                SCHEMA[1]: row[1],
-                                SCHEMA[2]: row[2],
-                                SCHEMA[3]: row[3]
-                            }
+                                data_entry = RainfallEventMeasurementsDataEntry(final_compiled_event_data)
+                                data_entry.set_db_destination(sensor_site)
 
-                            new_entry = RainfallEventDataEntry(data_entry)
-                            new_entry.set_db_destination(sensor_name)
+                                db_importer.add(data_entry)
 
-                            db_importer.add(new_entry)
+                                print("\r\tRainfall Event measurements processed: %d" %
+                                      compiled_measurement_count, end='', flush=True)
 
-                            correlated_value_count += 1
+                                compiled_measurement_count += 1
 
-                            print("\r\tRainfall events processed: %d" % correlated_value_count, end='', flush=True)
+                    event_compilation_processing_elapsed_time = (timeit.default_timer() -
+                                                                 event_compilation_processing_start_time
+                                                                 )
 
-                            # grab next row
-                            row = cursor.fetchone()
-
-                        # increment source block start time
-                        # ensure overlapping time windows are managed by query, and here
-                        # query should be date_field >= start_date and date_field < end_date
-                        cosmo_date_i = cosmo_date_i + datetime.timedelta(seconds=CORRELATION_INCREMENT)
-
-                correlation_processing_elapsed_time = (timeit.default_timer() - correlation_processing_start_time)
-                log_msg = "Completed rainfall events Processing in %.3f sec" % correlation_processing_elapsed_time
-                print("\n%s" % log_msg, flush=True)
-                logger.info(log_msg)
-
-            # iterate over cosmo timestamps and query resolved values
-            # resolved dates +/- resolution window
-            # do any math to take or compute the conductivity
-            # if no more cosmo timestamps for a time interval
-            # get the next interval
-            # repeat as above
+                    log_msg = ("Completed rainfall event compilation Processing in %.3f sec" %
+                               event_compilation_processing_elapsed_time
+                               )
+                    print("\n%s" % log_msg, flush=True)
+                    logger.info(log_msg)
 
             except Error as e:
                 logger.error("Error checking databases", e)
@@ -479,12 +521,7 @@ def main(parsed_args):
     db_importer.set_importer_name("rainfall-events")
     db_importer.set_schema(SCHEMA)
 
-    # for a sensor
-    #   get the start date and end date
-    for sensor in SENSORS:
-        print("Running rainfall event consolidation for sensor %s" % sensor)
-        compile_rainfall_events(sensor, db_config_filename, db_importer)
-        # compile_event_data(sensor, db_config_filename, db_importer)
+    compile_rainfall_event_data(db_config_filename, db_importer)
 
     #########################
     if dry_run:
@@ -509,7 +546,7 @@ if __name__ == "__main__":
     # shell args
     #
     # --dry-run                                              read data dump file and output sql statements.
-    # -cfg conductivity-rainfall-correlation.json            database config     not required
+    # -cfg rainfall-event-data.json                          database config     not required
     ############################
 
     # reads sys.argv
@@ -518,7 +555,7 @@ if __name__ == "__main__":
     parser.add_argument('--dry-run', action='store_const', const=1, dest='dryrun',
                         help='Output database insert statements. Does not write to database.')
     parser.add_argument('-cfg', nargs=1, dest='db_cfg_file',
-                        help='Database config file in json format. Ex: conductivity-rainfall-correlation.json')
+                        help='Database config file in json format. Ex: rainfall-event-data.json')
 
     # call main with parsed args
     main(parser.parse_args())
