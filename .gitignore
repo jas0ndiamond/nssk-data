@@ -178,3 +178,5 @@ output
 #dnv-whitewater*.json
 #cnv-rainfall.json
 
+src/distribution/tmp/
+src/distribution/nssk-data-dist.zip
