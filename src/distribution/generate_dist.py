@@ -1,4 +1,5 @@
 # dump database tables into csv files, zip up for deployment onto nssk.jas0n.ca
+import re
 import shutil
 import zipfile
 from os.path import exists
@@ -70,9 +71,11 @@ DUMP_HTML_FILE = "index.html"
 DUMP_HTML_TITLE = "NSSK Database Dumps"
 DIST_FILE = "nssk-data-dist.zip"
 TEMP_DIR = "./tmp/"
+FAVICON_DIR = "./res/favicon/"
 
 ########################
 # dump files
+# TODO move all this to a json file
 
 DUMP_FILES_CNV_RAINFALL = {
     "CNV": "nssk_cnv_rainfall.csv"
@@ -85,17 +88,30 @@ DUMP_FILES_DNV_WHITEWATER = {
 # dump file for each CoSMo site
 
 DUMP_FILES_COSMO = {
-    "HAST01": "nssk_cosmo.hast01.csv",
-    "HAST02": "nssk_cosmo.hast02.csv",
-    "HAST03": "nssk_cosmo.hast03.csv",
-    "WAGG01": "nssk_cosmo.wagg01.csv",
-    "WAGG02": "nssk_cosmo.wagg02.csv",
-    "WAGG03": "nssk_cosmo.wagg03.csv",
+    "HAST01": "nssk_cosmo.HAST01.csv",
+    "HAST02": "nssk_cosmo.HAST02.csv",
+    "HAST03": "nssk_cosmo.HAST03.csv",
+
+    "MACK02": "nssk_cosmo.MACK02.csv",
+    "MACK03": "nssk_cosmo.MACK03.csv",
+    "MACK04": "nssk_cosmo.MACK04.csv",
+    "MACK05": "nssk_cosmo.MACK05.csv",
+
+    "MISS01": "nssk_cosmo.MISS01.csv",
+
+    "MOSQ02": "nssk_cosmo.MOSQ02.csv",
+    "MOSQ03": "nssk_cosmo.MOSQ03.csv",
+    "MOSQ04": "nssk_cosmo.MOSQ04.csv",
+    "MOSQ05": "nssk_cosmo.MOSQ05.csv",
+
+    "WAGG01": "nssk_cosmo.WAGG01.csv",
+    "WAGG02": "nssk_cosmo.WAGG02.csv",
+    "WAGG03": "nssk_cosmo.WAGG03.csv",
 }
 
 DUMP_FILES_CONDUCTIVITY_RAINFALL_CORRELATION = {
-    "WAGG01": "nssk_conductivity_rainfall_correlation.wagg01.csv",
-    "WAGG03": "nssk_conductivity_rainfall_correlation.wagg03.csv",
+    "WAGG01": "nssk_conductivity_rainfall_correlation.WAGG01.csv",
+    "WAGG03": "nssk_conductivity_rainfall_correlation.WAGG03.csv",
 }
 
 DUMP_FILES_RAINFALL_EVENTS = {
@@ -103,8 +119,8 @@ DUMP_FILES_RAINFALL_EVENTS = {
 }
 
 DUMP_FILES_RAINFALL_EVENT_DATA = {
-    "WAGG01": "nssk_rainfall_event_data.wagg01.csv",
-    "WAGG03": "nssk_rainfall_event_data.wagg03.csv"
+    "WAGG01": "nssk_rainfall_event_data.WAGG01.csv",
+    "WAGG03": "nssk_rainfall_event_data.WAGG03.csv"
 }
 
 
@@ -374,6 +390,9 @@ def zip_dump_file(dump_file):
         print("Compressing dump file: %s" % dump_file)
         with ZipFile("%s.zip" % file, 'w', zipfile.ZIP_DEFLATED) as zip_h:
             zip_h.write(file, arcname="./%s" % dump_file)
+
+        # remove source csv file
+        os.remove(file)
     else:
         print("ERROR: encountered missing csv dump file when attempting compression: %s" % file)
 
@@ -527,6 +546,7 @@ def write_html_file():
     with open("%s%s" % (TEMP_DIR, DUMP_HTML_FILE), 'w') as writer:
         writer.write(dist_html_page)
 
+
 # create the dist from intermediate resources. this file gets deployed on some service medium
 def create_dist():
     print("Building distribution from zipped dump files and resources")
@@ -543,10 +563,17 @@ def create_dist():
     shutil.copyfile("./res/nssk-banner.png", "%s/nssk-banner.png" % TEMP_DIR)
 
     # res/favicos
+    # shutil.copytree("./res/favicon", TEMP_DIR)
+    favicon_files = os.listdir(FAVICON_DIR)
+    for favicon_file in favicon_files:
+        shutil.copy2("%s/%s" % (FAVICON_DIR, favicon_file), TEMP_DIR)
 
     # assemble zip file
-
-    pass
+    with ZipFile("./%s" % DIST_FILE, 'w', zipfile.ZIP_DEFLATED) as zip_h:
+        for root, dirs, files in os.walk(TEMP_DIR):
+            for file in files:
+                print("Adding file to distribution: %s" % file)
+                zip_h.write("%s/%s" % (TEMP_DIR, file), arcname="./%s" % file)
 
 
 def cleanup():

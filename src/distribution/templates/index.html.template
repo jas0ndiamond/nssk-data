@@ -2,11 +2,15 @@
 <head>
 <title>NSSK Data Source Aggregation, Storage, and Analysis</title>
 <meta charset="UTF-8">
+<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png">
+<link rel="manifest" href="./site.webmanifest">
 <style>
 table, th, td {
   border: 1px solid blue;
   border-collapse: collapse;
-  width: 720px;
+  width: 820px;
 }
 th {
     text-align: center;
@@ -23,11 +27,11 @@ hr {
 }
 body {
     background-color: #e0e0eb;
-    width: 1200px;
+    width: 820px;
 }
 </style>
 </head>
-<body style=””>
+<body>
 
 
 <img src="./nssk-banner.png"/><br>
@@ -69,6 +73,7 @@ $RAINFALL_EVENTS_BLOCK
 
 North Shore Stream Keepers 2024<br>
 Report problems, requests, suggestions, and questions to Jason<br>
+<a href="https://github.com/jas0ndiamond/nssk-data">nssk-data Project</a><br>
 <a href="https://www.nssk.ca">NSSK</a>
 
 </body>
