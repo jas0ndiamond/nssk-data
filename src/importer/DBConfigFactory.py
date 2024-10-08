@@ -1,6 +1,7 @@
 import json
 from src.importer.DBConfig import DBConfig
 
+
 class DBConfigFactory(object):
 
     def build(config_file):
@@ -19,7 +20,6 @@ class DBConfigFactory(object):
             if config[DBConfig.CONFIG_PASS] is None:
                 raise "DB Config missing pass"
 
-            if config[DBConfig.CONFIG_DBASE] is None:
-                raise "DB Config missing dbase"
+            # don't require a database to be specified
 
         return config
