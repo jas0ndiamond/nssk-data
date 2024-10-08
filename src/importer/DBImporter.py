@@ -123,7 +123,7 @@ class DBImporter:
 
         self.inserts.append(statement)
 
-        #TODO call execute if inserts grows to large
+        # TODO call execute if inserts grows to large
 
     # dump our inserts. for debugging
     def dump(self):
@@ -160,8 +160,8 @@ class DBImporter:
                     database=config[DBConfig.CONFIG_DBASE],
             ) as connection:
 
+                config[DBConfig.CONFIG_USER] = None
                 config[DBConfig.CONFIG_PASS] = None
-                config = None
 
                 try:
                     with connection.cursor() as cursor:
@@ -187,7 +187,9 @@ class DBImporter:
 
                                 # print("error: %s " % e.args[1])
 
-                                # Arguments: (IntegrityError(1062, "1062 (23000): Duplicate entry '2019-06-12-10:00:00-Temperature, water' for key 'WAGG01.PRIMARY'", '23000'),)
+                                # Arguments: (IntegrityError(1062, "1062 (23000): Duplicate entry
+                                # '2019-06-12-10:00:00-Temperature, water' for key 'WAGG01.PRIMARY'", '23000'),
+                                # )
                                 if " Duplicate entry " in e.args[1] and " for key " in e.args[1]:
 
                                     self.logger.warning(
