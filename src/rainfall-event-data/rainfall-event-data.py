@@ -1,15 +1,12 @@
-# debug resource
-from pprint import pprint
-
-from mysql.connector import connect, Error, IntegrityError
+import argparse
 import datetime
+import logging
+import sys
+import timeit
+from pathlib import Path
 from string import Template
 
-from pathlib import Path
-import sys
-import argparse
-import logging
-import timeit
+from mysql.connector import connect, Error
 
 path_root = Path(__file__).parents[2]
 sys.path.append(str(path_root))
@@ -349,69 +346,6 @@ def correlate_with_cosmo_conductance(cnv_rainfall_timestamp, search_space, senso
 
     return correlated_measurement
 
-    # search_cosmo_start_datetime = cnv_rainfall_timestamp - datetime.timedelta(
-    #     seconds=CORRELATION_WINDOW)
-    # search_cosmo_end_datetime = cnv_rainfall_timestamp + datetime.timedelta(
-    #     seconds=CORRELATION_WINDOW)
-    #
-    # cosmo_conductance_template = Template(
-    #     open("../rainfall-event-data/sql/get-cosmo-data-for-rainfall-event.sql.template").read()
-    # )
-    #
-    # cosmo_conductance_query_sql = cosmo_conductance_template.substitute(
-    #     COSMO_START_DATETIME=search_cosmo_start_datetime,
-    #     COSMO_END_DATETIME=search_cosmo_end_datetime,
-    #     COSMO_SITE=sensor_site
-    # )
-    #
-    # there may not always be a correlated measurement
-    # if row is not None:
-    #     # determine best result
-    #
-    #     best_measurement_timestamp = None
-    #     best_measurement_value = None
-    #
-    #     # in seconds
-    #     closest_timestamp_distance = 999999
-    #
-    #     while row is not None:
-    #
-    #         # check if the timestamp in this row is better
-    #         if best_measurement_timestamp is None:
-    #             best_measurement_timestamp = row[0]
-    #             best_measurement_value = float(row[1])
-    #         else:
-    #             timestamp_distance = int(abs((cnv_rainfall_timestamp - row[0]).total_seconds()))
-    #
-    #             # is this measurement is closer to the cnv_timestamp than the existing best measurement?
-    #             if timestamp_distance < closest_timestamp_distance:
-    #
-    #                 best_measurement_timestamp = row[0]
-    #                 best_measurement_value = float(row[1])
-    #
-    #                 logger.debug("Found new best CoSMo measurement %s => %s." %
-    #                              (best_measurement_timestamp, best_measurement_value))
-    #
-    #                 closest_timestamp_distance = timestamp_distance
-    #             else:
-    #                 # this measurement is not closer to the cnv timestamp than the existing best measurement
-    #                 logger.debug("Sticking with existing best CoSMo measurement. Continuing...")
-    #
-    #         row = cursor.fetchone()
-    #
-    #     if best_measurement_timestamp is not None and best_measurement_value is not None:
-    #         correlated_measurement = (best_measurement_timestamp, best_measurement_value)
-    #     else:
-    #         msg = "Error correlating CoSMo measurement to CNV Timestamp"
-    #         logger.error(msg)
-    #         raise Exception(msg)
-    # else:
-    #     # no measurement in search window
-    #     # logging here might be noisy given that there will be gaps in measurements
-    #     pass
-    #
-    # return correlated_measurement
-
 
 # return a dnv whitewater flow reading within the correlation threshold for cnv_timestamp.
 # if multiple results in the search window are returned from the database, return the one nearest to the cnv_timestamp
@@ -540,7 +474,6 @@ def compile_rainfall_event_data(db_config_filename, db_importer):
                             ] = cnv_rainfall_measurement.get(
                                 RainfallEventMeasurementsDataEntry.CNV_AIR_TEMPERATURE_FIELD)
 
-                            # TODO refactor
                             # TODO use DNV_WW_SITES. need to break coupling where the cosmo section creates
                             #  the data entry
                             ################
