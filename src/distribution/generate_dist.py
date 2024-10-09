@@ -60,6 +60,7 @@ NSSK_RAINFALL_EVENTS_TIMESTAMP_FIELD = "EVENT_START_TIMESTAMP"
 NSSK_RAINFALL_EVENTS_TABLE = "RAINFALL_EVENTS"
 
 NSSK_RAINFALL_EVENT_DATA_DB = "NSSK_RAINFALL_EVENT_DATA"
+NSSK_RAINFALL_EVENT_DATA_TIMESTAMP_FIELD = "CNV_RAINFALL_TIMESTAMP"
 NSSK_RAINFALL_EVENT_DATA_SITES = [
     "WAGG01",
     "WAGG03"
@@ -198,7 +199,7 @@ def run_dump(db_config_filename):
 
                     # dump rainfall event data
                     print("Dumping Rainfall Event Data")
-                    # dump_rainfall_event_data(cursor)
+                    dump_rainfall_event_data(cursor)
 
                     success = True
 
@@ -359,7 +360,36 @@ def dump_rainfall_events(cursor):
 
 
 def dump_rainfall_event_data(cursor):
-    pass
+
+    for site in DUMP_FILES_RAINFALL_EVENT_DATA:
+
+        # manually write header
+        cursor.execute("describe %s.%s" % (NSSK_RAINFALL_EVENTS_DB, site))
+        rows = cursor.fetchall()
+
+        schema = []
+        for row in rows:
+            schema.append(row[0])
+
+        # dump table contents
+        with (open("%s%s" % (TEMP_DIR, DUMP_FILES_RAINFALL_EVENT_DATA[site]), 'w') as writer):
+            csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
+            csv_writer.writerow(schema)
+
+            query = "select * from %s.%s ORDER BY %s ASC" % (
+                NSSK_RAINFALL_EVENTS_DB,
+                site,
+                NSSK_RAINFALL_EVENT_DATA_TIMESTAMP_FIELD
+            )
+
+            # print("Query: %s" % query)
+            cursor.execute(query)
+
+            rows = cursor.fetchmany(FETCH_SIZE)
+
+            while rows is not None and rows:
+                csv_writer.writerows(rows)
+                rows = cursor.fetchmany(FETCH_SIZE)
 
 
 def zip_dump_files():
@@ -379,6 +409,9 @@ def zip_dump_files():
 
     for site in DUMP_FILES_RAINFALL_EVENTS:
         zip_dump_file(DUMP_FILES_RAINFALL_EVENTS[site])
+
+    for site in DUMP_FILES_RAINFALL_EVENT_DATA:
+        zip_dump_file(DUMP_FILES_RAINFALL_EVENT_DATA[site])
 
 
 # zip a dump file in its own archive at archive root level
@@ -531,6 +564,31 @@ def write_html_file():
     rainfall_events_section_block = section_block_template.substitute(
         SECTION_BODY=rainfall_events_section_body
     )
+    ##########
+    # Rainfall Event Data
+
+    rainfall_event_data_section_body = ""
+    for name in DUMP_FILES_RAINFALL_EVENT_DATA:
+        zip_file = "%s.zip" % DUMP_FILES_RAINFALL_EVENT_DATA[name]
+
+        # file in the work dir (./tmp/file.csv.zip)
+        zip_file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
+
+        # http link to file deployed on webserver (./file.csv.zip)
+        zip_file_link = "./%s" % zip_file
+
+        rainfall_event_data_section_body += resource_entry_template.substitute(
+            FILE=zip_file,
+            LINK=zip_file_link,
+            NAME=DUMP_FILES_RAINFALL_EVENT_DATA[name],
+            DESC="Rainfall Event Data for %s Description" % name,
+            SIZE="%.3f MB" % (os.path.getsize(zip_file_in_dist) / 1000000),
+            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(zip_file_in_dist)))
+        )
+
+    rainfall_event_data_section_block = section_block_template.substitute(
+        SECTION_BODY=rainfall_event_data_section_body
+    )
 
     ##############################
     dist_html_page = html_template.substitute(
@@ -538,8 +596,8 @@ def write_html_file():
         DNV_WHITEWATER_BLOCK=dnv_whitewater_section_block,
         COSMO_BLOCK=cosmo_section_block,
         CONDUCTIVITY_RAINFALL_CORRELATION_BLOCK=conductivity_rainfall_correlation_section_block,
-        RAINFALL_EVENTS_BLOCK=rainfall_events_section_block
-
+        RAINFALL_EVENTS_BLOCK=rainfall_events_section_block,
+        RAINFALL_EVENT_DATA_BLOCK=rainfall_event_data_section_block
     )
 
     # write everything to file
@@ -563,7 +621,6 @@ def create_dist():
     shutil.copyfile("./res/nssk-banner.png", "%s/nssk-banner.png" % TEMP_DIR)
 
     # res/favicos
-    # shutil.copytree("./res/favicon", TEMP_DIR)
     favicon_files = os.listdir(FAVICON_DIR)
     for favicon_file in favicon_files:
         shutil.copy2("%s/%s" % (FAVICON_DIR, favicon_file), TEMP_DIR)

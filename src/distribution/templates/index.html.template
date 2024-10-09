@@ -67,7 +67,7 @@ $RAINFALL_EVENTS_BLOCK
 <hr>
 <h3>Rainfall Event Data</h3>
 Rainfall Event Data occurring in CNV/DNV area<br>
-$RAINFALL_EVENTS_BLOCK
+$RAINFALL_EVENT_DATA_BLOCK
 
 <hr>
 
