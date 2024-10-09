@@ -352,17 +352,17 @@ def run_correlation(sensor_name, db_config_filename, db_importer):
                         correlation_start_time = cosmo_block_start_date - datetime.timedelta(seconds=CORRELATION_WINDOW)
                         correlation_end_time = cosmo_block_end_date + datetime.timedelta(seconds=CORRELATION_WINDOW)
 
-                        print(("==========\n" +
-                               "cosmo_block_start_date: %s\n" +
-                               "cosmo_block_end_date: %s\n" +
-                               "correlation_start_time: %s\n" +
-                               "correlation_end_time: %s"
-                               ) %
-                              (cosmo_block_start_date,
-                               cosmo_block_end_date,
-                               correlation_start_time,
-                               correlation_end_time)
-                              )
+                        # print(("==========\n" +
+                        #        "cosmo_block_start_date: %s\n" +
+                        #        "cosmo_block_end_date: %s\n" +
+                        #        "correlation_start_time: %s\n" +
+                        #        "correlation_end_time: %s"
+                        #        ) %
+                        #       (cosmo_block_start_date,
+                        #        cosmo_block_end_date,
+                        #        correlation_start_time,
+                        #        correlation_end_time)
+                        #       )
 
                         ####################
                         # run correlation
