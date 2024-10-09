@@ -47,9 +47,21 @@ logger.setLevel(logging.DEBUG)
 logging.getLogger("RainfallEventMeasurementsDataEntry").setLevel(logging.INFO)
 logging.getLogger("DBImporter").setLevel(logging.INFO)
 
+########################
+##########
+
 # time window to search for a corresponding conductivity value
 # +/- 5 minutes. in seconds
 CORRELATION_WINDOW = 5 * 60
+
+# how many rows of the data window to retrieve at a time
+WINDOW_RETRIEVE_SIZE = 200
+
+##########
+
+DNV_WHITEWATER_SITES = [
+    "DNV"
+]
 
 COSMO_SENSOR_SITES = [
     "WAGG01",
@@ -207,155 +219,247 @@ def load_cnv_rainfall_data(cursor, start_datetime, end_datetime):
     return data
 
 
-def correlate_with_cosmo_conductance(cursor, sensor_site, cnv_rainfall_timestamp):
+# returns dict of sites to data rows
+def get_dnv_whitewater_data_window(cursor, range_start_datetime, range_end_datetime):
+    results = {}
+
+    logger.debug("Retrieving DNV Whitewater Data window for %s => %s" % (range_start_datetime, range_end_datetime))
+
+    # define the search space
+    search_dnv_whitewater_start_datetime = range_start_datetime - datetime.timedelta(
+        seconds=CORRELATION_WINDOW)
+    search_dnv_whitewater_end_datetime = range_end_datetime + datetime.timedelta(
+        seconds=CORRELATION_WINDOW)
+
+    # TODO dont read this every time
+    dnv_whitewater_template = Template(
+        open("../rainfall-event-data/sql/get-dnv-whitewater-data-for-rainfall-event.sql.template").read())
+
+    for site in DNV_WHITEWATER_SITES:
+
+        get_dnv_whitewater_query_sql = dnv_whitewater_template.substitute(
+            DNV_WHITEWATER_START_DATETIME=search_dnv_whitewater_start_datetime,
+            DNV_WHITEWATER_END_DATETIME=search_dnv_whitewater_end_datetime,
+            SITE=site
+        )
+
+        cursor.execute(get_dnv_whitewater_query_sql)
+
+        data_rows = []
+
+        rows = cursor.fetchmany(WINDOW_RETRIEVE_SIZE)
+
+        while rows is not None and rows:
+            data_rows.extend(rows)
+            rows = cursor.fetchmany(WINDOW_RETRIEVE_SIZE)
+
+        logger.debug("Retrieved DNV Whitewater Data window of size %d for site %s" % (len(data_rows), site))
+
+        results[site] = data_rows
+
+    return results
+
+
+# returns dict of sites to data rows
+def get_cosmo_data_window(cursor, range_start_datetime, range_end_datetime):
+    results = {}
+
+    logger.debug("Retrieving CoSMo Data window for %s => %s" % (range_start_datetime, range_end_datetime))
+
+    # define the search space
+    search_cosmo_start_datetime = range_start_datetime - datetime.timedelta(
+        seconds=CORRELATION_WINDOW)
+    search_cosmo_end_datetime = range_end_datetime + datetime.timedelta(
+        seconds=CORRELATION_WINDOW)
+
+    # TODO dont read this every time
+    dnv_whitewater_template = Template(
+        open("../rainfall-event-data/sql/get-cosmo-data-for-rainfall-event.sql.template").read())
+
+    for site in COSMO_SENSOR_SITES:
+        get_cosmo_query_sql = dnv_whitewater_template.substitute(
+            COSMO_START_DATETIME=search_cosmo_start_datetime,
+            COSMO_END_DATETIME=search_cosmo_end_datetime,
+            COSMO_SITE=site
+        )
+
+        cursor.execute(get_cosmo_query_sql)
+
+        data_rows = []
+
+        rows = cursor.fetchmany(WINDOW_RETRIEVE_SIZE)
+
+        while rows is not None and rows:
+            data_rows.extend(rows)
+            rows = cursor.fetchmany(WINDOW_RETRIEVE_SIZE)
+
+        logger.debug("Retrieved CoSMo Data window of size %d for site %s" % (len(data_rows), site))
+
+        results[site] = data_rows
+
+    return results
+
+
+# return a cosmo conductance within the correlation threshold for cnv_timestamp.
+# if multiple results in the search window are returned from the database, return the one nearest to the cnv_timestamp
+def correlate_with_cosmo_conductance(cnv_rainfall_timestamp, search_space, sensor_site):
     logger.debug("Attempting to correlate a CoSMo measurement with CNV Rainfall timestamp %s for site %s"
                  % (cnv_rainfall_timestamp, sensor_site))
 
     # default measurement is a tuple with None values for measurement timestamp and value
     correlated_measurement = (None, None)
 
-    search_cosmo_start_datetime = cnv_rainfall_timestamp - datetime.timedelta(
-        seconds=CORRELATION_WINDOW)
-    search_cosmo_end_datetime = cnv_rainfall_timestamp + datetime.timedelta(
-        seconds=CORRELATION_WINDOW)
+    best_measurement_timestamp = None
+    best_measurement_value = None
 
-    cosmo_conductance_template = Template(
-        open("../rainfall-event-data/sql/get-cosmo-data-for-rainfall-event.sql.template").read()
-    )
+    # in seconds
+    closest_timestamp_distance = 999999
 
-    cosmo_conductance_query_sql = cosmo_conductance_template.substitute(
-        COSMO_START_DATETIME=search_cosmo_start_datetime,
-        COSMO_END_DATETIME=search_cosmo_end_datetime,
-        COSMO_SITE=sensor_site
-    )
+    for row in search_space[sensor_site]:
+        # TODO empty and None checks for row
 
-    cursor.execute(cosmo_conductance_query_sql)
-
-    row = cursor.fetchone()
-
-    # there may not always be a correlated measurement
-    if row is not None:
         # determine best result
 
         best_measurement_timestamp = None
         best_measurement_value = None
 
-        # in seconds
-        closest_timestamp_distance = 999999
+        # check if the timestamp in this row is better
+        if best_measurement_timestamp is None:
+            best_measurement_timestamp = row[0]
+            best_measurement_value = float(row[1])
+        else:
+            timestamp_distance = int(abs((cnv_rainfall_timestamp - row[0]).total_seconds()))
 
-        while row is not None:
+            # is this measurement is closer to the cnv_timestamp than the existing best measurement?
+            if timestamp_distance < closest_timestamp_distance:
 
-            # check if the timestamp in this row is better
-            if best_measurement_timestamp is None:
                 best_measurement_timestamp = row[0]
                 best_measurement_value = float(row[1])
+
+                logger.debug("Found new best CoSMo measurement %s => %s." %
+                             (best_measurement_timestamp, best_measurement_value))
+
+                closest_timestamp_distance = timestamp_distance
             else:
-                timestamp_distance = int(abs((cnv_rainfall_timestamp - row[0]).total_seconds()))
+                # this measurement is not closer to the cnv timestamp than the existing best measurement
+                logger.debug("Sticking with existing best CoSMo measurement. Continuing...")
 
-                # is this measurement is closer to the cnv_timestamp than the existing best measurement?
-                if timestamp_distance < closest_timestamp_distance:
-
-                    best_measurement_timestamp = row[0]
-                    best_measurement_value = float(row[1])
-
-                    logger.debug("Found new best CoSMo measurement %s => %s." %
-                                 (best_measurement_timestamp, best_measurement_value))
-
-                    closest_timestamp_distance = timestamp_distance
-                else:
-                    # this measurement is not closer to the cnv timestamp than the existing best measurement
-                    logger.debug("Sticking with existing best CoSMo measurement. Continuing...")
-
-            row = cursor.fetchone()
-
-        if best_measurement_timestamp is not None and best_measurement_value is not None:
-            correlated_measurement = (best_measurement_timestamp, best_measurement_value)
-        else:
-            msg = "Error correlating CoSMo measurement to CNV Timestamp"
-            logger.error(msg)
-            raise Exception(msg)
-    else:
-        # no measurement in search window
-        # logging here might be noisy given that there will be gaps in measurements
-        pass
+    if best_measurement_timestamp is not None and best_measurement_value is not None:
+        correlated_measurement = (best_measurement_timestamp, best_measurement_value)
 
     return correlated_measurement
+
+    # search_cosmo_start_datetime = cnv_rainfall_timestamp - datetime.timedelta(
+    #     seconds=CORRELATION_WINDOW)
+    # search_cosmo_end_datetime = cnv_rainfall_timestamp + datetime.timedelta(
+    #     seconds=CORRELATION_WINDOW)
+    #
+    # cosmo_conductance_template = Template(
+    #     open("../rainfall-event-data/sql/get-cosmo-data-for-rainfall-event.sql.template").read()
+    # )
+    #
+    # cosmo_conductance_query_sql = cosmo_conductance_template.substitute(
+    #     COSMO_START_DATETIME=search_cosmo_start_datetime,
+    #     COSMO_END_DATETIME=search_cosmo_end_datetime,
+    #     COSMO_SITE=sensor_site
+    # )
+    #
+    # there may not always be a correlated measurement
+    # if row is not None:
+    #     # determine best result
+    #
+    #     best_measurement_timestamp = None
+    #     best_measurement_value = None
+    #
+    #     # in seconds
+    #     closest_timestamp_distance = 999999
+    #
+    #     while row is not None:
+    #
+    #         # check if the timestamp in this row is better
+    #         if best_measurement_timestamp is None:
+    #             best_measurement_timestamp = row[0]
+    #             best_measurement_value = float(row[1])
+    #         else:
+    #             timestamp_distance = int(abs((cnv_rainfall_timestamp - row[0]).total_seconds()))
+    #
+    #             # is this measurement is closer to the cnv_timestamp than the existing best measurement?
+    #             if timestamp_distance < closest_timestamp_distance:
+    #
+    #                 best_measurement_timestamp = row[0]
+    #                 best_measurement_value = float(row[1])
+    #
+    #                 logger.debug("Found new best CoSMo measurement %s => %s." %
+    #                              (best_measurement_timestamp, best_measurement_value))
+    #
+    #                 closest_timestamp_distance = timestamp_distance
+    #             else:
+    #                 # this measurement is not closer to the cnv timestamp than the existing best measurement
+    #                 logger.debug("Sticking with existing best CoSMo measurement. Continuing...")
+    #
+    #         row = cursor.fetchone()
+    #
+    #     if best_measurement_timestamp is not None and best_measurement_value is not None:
+    #         correlated_measurement = (best_measurement_timestamp, best_measurement_value)
+    #     else:
+    #         msg = "Error correlating CoSMo measurement to CNV Timestamp"
+    #         logger.error(msg)
+    #         raise Exception(msg)
+    # else:
+    #     # no measurement in search window
+    #     # logging here might be noisy given that there will be gaps in measurements
+    #     pass
+    #
+    # return correlated_measurement
 
 
 # return a dnv whitewater flow reading within the correlation threshold for cnv_timestamp.
 # if multiple results in the search window are returned from the database, return the one nearest to the cnv_timestamp
-def correlate_with_dnv_flow_reading(cursor, cnv_rainfall_timestamp):
+# search_space is a dict of sites bound to arrays of rows
+def correlate_with_dnv_flow_reading(cnv_rainfall_timestamp, search_space, sensor_site):
     logger.debug("Attempting to correlate a DNV Whitewater measurement with CNV Rainfall timestamp %s"
                  % cnv_rainfall_timestamp)
 
     # default measurement is a tuple with None values for measurement timestamp and value
     correlated_measurement = (None, None)
 
-    # limited to 600 results
-    dnv_whitewater_template = Template(
-        open("../rainfall-event-data/sql/get-dnv-whitewater-data-for-rainfall-event.sql.template").read())
+    best_measurement_timestamp = None
+    best_measurement_value = None
 
-    search_dnv_whitewater_start_datetime = cnv_rainfall_timestamp - datetime.timedelta(
-        seconds=CORRELATION_WINDOW)
-    search_dnv_whitewater_end_datetime = cnv_rainfall_timestamp + datetime.timedelta(
-        seconds=CORRELATION_WINDOW)
+    # in seconds
+    closest_timestamp_distance = 999999
 
-    get_dnv_whitewater_query_sql = dnv_whitewater_template.substitute(
-        DNV_WHITEWATER_START_DATETIME=search_dnv_whitewater_start_datetime,
-        DNV_WHITEWATER_END_DATETIME=search_dnv_whitewater_end_datetime,
-        SITE=SOURCE_DB_DNV_WHITEWATER_SITE
-    )
-
-    cursor.execute(get_dnv_whitewater_query_sql)
-
-    row = cursor.fetchone()
-
-    # there may not always be a correlated measurement
-    if row is not None:
+    for row in search_space[sensor_site]:
+        # TODO empty and None checks for row
 
         # determine best result
 
         best_measurement_timestamp = None
         best_measurement_value = None
 
-        # in seconds
-        closest_timestamp_distance = 999999
+        # check if the timestamp in this row is better
+        if best_measurement_timestamp is None:
+            best_measurement_timestamp = row[0]
+            best_measurement_value = float(row[1])
+        else:
+            timestamp_distance = int(abs((cnv_rainfall_timestamp - row[0]).total_seconds()))
 
-        while row is not None:
+            # is this measurement is closer to the cnv_timestamp than the existing best measurement?
+            if timestamp_distance < closest_timestamp_distance:
 
-            # check if the timestamp in this row is better
-            if best_measurement_timestamp is None:
                 best_measurement_timestamp = row[0]
                 best_measurement_value = float(row[1])
+
+                logger.debug("Found new best DNV Whitewater measurement %s => %s." %
+                             (best_measurement_timestamp, best_measurement_value))
+
+                closest_timestamp_distance = timestamp_distance
             else:
-                timestamp_distance = int(abs((cnv_rainfall_timestamp - row[0]).total_seconds()))
+                # this measurement is not closer to the cnv timestamp than the existing best measurement
+                logger.debug("Sticking with existing best DNV Whitewater measurement. Continuing...")
 
-                # is this measurement is closer to the cnv_timestamp than the existing best measurement?
-                if timestamp_distance < closest_timestamp_distance:
-
-                    best_measurement_timestamp = row[0]
-                    best_measurement_value = float(row[1])
-
-                    logger.debug("Found new best DNV Whitewater measurement %s => %s." %
-                                 (best_measurement_timestamp, best_measurement_value))
-
-                    closest_timestamp_distance = timestamp_distance
-                else:
-                    # this measurement is not closer to the cnv timestamp than the existing best measurement
-                    logger.debug("Sticking with existing best DNV Whitewater measurement. Continuing...")
-
-            row = cursor.fetchone()
-
-        if best_measurement_timestamp is not None and best_measurement_value is not None:
-            correlated_measurement = (best_measurement_timestamp, best_measurement_value)
-        else:
-            msg = "Error correlating DNV Whitewater measurement to CNV Timestamp"
-            logger.error(msg)
-            raise Exception(msg)
-    else:
-        # no measurement in search window
-        # logging here might be noisy given that there will be gaps in measurements
-        pass
+    if best_measurement_timestamp is not None and best_measurement_value is not None:
+        correlated_measurement = (best_measurement_timestamp, best_measurement_value)
 
     return correlated_measurement
 
@@ -400,10 +504,20 @@ def compile_rainfall_event_data(db_config_filename, db_importer):
 
                         compiled_event_data = {}
 
+                        # get dnv whitewater window for this rainfall event (start_datetime - 5, end_datetime + 5)
+                        dnv_whitewater_data_window = get_dnv_whitewater_data_window(
+                            cursor, start_datetime, end_datetime
+                        )
+
+                        # get cosmo window for this rainfall event
+                        cosmo_data_window = get_cosmo_data_window(
+                            cursor, start_datetime, end_datetime
+                        )
+
                         # {CNV_TIMESTAMP_FIELD, CNV_RAINFALL_AMOUNT_FIELD, CNV_AIRTEMP_FIELD}
                         for cnv_rainfall_measurement in load_cnv_rainfall_data(cursor, start_datetime, end_datetime):
 
-                            # pprint(cnsv_rainfall_measurement)
+                            # pprint(cnv_rainfall_measurement)
 
                             # set rainfall event id
                             compiled_event_data[
@@ -426,34 +540,42 @@ def compile_rainfall_event_data(db_config_filename, db_importer):
                             ] = cnv_rainfall_measurement.get(
                                 RainfallEventMeasurementsDataEntry.CNV_AIR_TEMPERATURE_FIELD)
 
+                            # TODO refactor
+                            # TODO use DNV_WW_SITES. need to break coupling where the cosmo section creates
+                            #  the data entry
+                            ################
                             # correlate dnv whitewater flow reading with cnv rainfall measurement
 
+                            # for sensor_site in DNV_WHITEWATER_SITES:
                             # (timestamp, value)
                             (correlated_flow_timestamp, correlated_flow_value) = correlate_with_dnv_flow_reading(
-                                cursor,
-                                cnv_rainfall_measurement.get(RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD)
+                                cnv_rainfall_measurement.get(RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD),
+                                dnv_whitewater_data_window,
+                                SOURCE_DB_DNV_WHITEWATER_SITE
                             )
 
                             compiled_event_data[
                                 RainfallEventMeasurementsDataEntry.DNV_WHITEWATER_FLOW_READING_FIELD
                             ] = correlated_flow_value
 
+                            ################
                             # correlate conductance measurements with cnv rainfall measurement for each site
                             for sensor_site in COSMO_SENSOR_SITES:
                                 # Need to set sensor site as destination in DataEntry object
                                 # even if no conductance value can be correlated
 
                                 (conductance_timestamp, conductance_value) = correlate_with_cosmo_conductance(
-                                    cursor,
-                                    sensor_site,
-                                    cnv_rainfall_measurement.get(RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD)
+                                    cnv_rainfall_measurement.get(
+                                        RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD),
+                                    cosmo_data_window,
+                                    sensor_site
                                 )
 
                                 # each sensor needs its own copy of compiled_event_data
                                 final_compiled_event_data = compiled_event_data.copy()
 
                                 final_compiled_event_data[
-                                  RainfallEventMeasurementsDataEntry.COSMO_CONDUCTANCE_RESULT_FIELD
+                                    RainfallEventMeasurementsDataEntry.COSMO_CONDUCTANCE_RESULT_FIELD
                                 ] = conductance_value
 
                                 logger.debug("Final compiled event data entry: %s" % final_compiled_event_data)
