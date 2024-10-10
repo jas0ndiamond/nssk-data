@@ -86,6 +86,21 @@ SOURCE_DB_DNV_WHITEWATER_SITE = "DNV"
 
 TARGET_DATABASE = None
 
+###############
+# templates
+
+DNV_WHITEWATER_DATA_WINDOW_TEMPLATE = Template(
+    open("../rainfall-event-data/sql/get-dnv-whitewater-data-for-rainfall-event.sql.template").read())
+
+CNV_RAINFALL_TEMPLATE = Template(
+    open("../rainfall-event-data/sql/get-cnv-data-for-rainfall-event.sql.template").read())
+
+# TODO dont read this every time
+COSMO_DATA_WINDOW_TEMPLATE = Template(
+    open("../rainfall-event-data/sql/get-cosmo-data-for-rainfall-event.sql.template").read())
+
+
+###############
 
 def precheck(conf_file):
     # need a destination database/table for the correlated data
@@ -186,10 +201,7 @@ def load_rainfall_event_intervals(cursor):
 
 # load the rainfall data for the given time interval. return a list of tuples that will be used in correlation steps.
 def load_cnv_rainfall_data(cursor, start_datetime, end_datetime):
-    cnv_rainfall_template = Template(
-        open("../rainfall-event-data/sql/get-cnv-data-for-rainfall-event.sql.template").read())
-
-    get_cnv_rainfall_data_query_sql = cnv_rainfall_template.substitute(
+    get_cnv_rainfall_data_query_sql = CNV_RAINFALL_TEMPLATE.substitute(
         CNV_RAINFALL_START_DATETIME=start_datetime,
         CNV_RAINFALL_END_DATETIME=end_datetime,
         SITE=SOURCE_DB_CNV_RAINFALL_SITE
@@ -228,13 +240,8 @@ def get_dnv_whitewater_data_window(cursor, range_start_datetime, range_end_datet
     search_dnv_whitewater_end_datetime = range_end_datetime + datetime.timedelta(
         seconds=CORRELATION_WINDOW)
 
-    # TODO dont read this every time
-    dnv_whitewater_template = Template(
-        open("../rainfall-event-data/sql/get-dnv-whitewater-data-for-rainfall-event.sql.template").read())
-
     for site in DNV_WHITEWATER_SITES:
-
-        get_dnv_whitewater_query_sql = dnv_whitewater_template.substitute(
+        get_dnv_whitewater_query_sql = DNV_WHITEWATER_DATA_WINDOW_TEMPLATE.substitute(
             DNV_WHITEWATER_START_DATETIME=search_dnv_whitewater_start_datetime,
             DNV_WHITEWATER_END_DATETIME=search_dnv_whitewater_end_datetime,
             SITE=site
@@ -269,12 +276,8 @@ def get_cosmo_data_window(cursor, range_start_datetime, range_end_datetime):
     search_cosmo_end_datetime = range_end_datetime + datetime.timedelta(
         seconds=CORRELATION_WINDOW)
 
-    # TODO dont read this every time
-    dnv_whitewater_template = Template(
-        open("../rainfall-event-data/sql/get-cosmo-data-for-rainfall-event.sql.template").read())
-
     for site in COSMO_SENSOR_SITES:
-        get_cosmo_query_sql = dnv_whitewater_template.substitute(
+        get_cosmo_query_sql = COSMO_DATA_WINDOW_TEMPLATE.substitute(
             COSMO_START_DATETIME=search_cosmo_start_datetime,
             COSMO_END_DATETIME=search_cosmo_end_datetime,
             COSMO_SITE=site
@@ -306,19 +309,16 @@ def correlate_with_cosmo_conductance(cnv_rainfall_timestamp, search_space, senso
     # default measurement is a tuple with None values for measurement timestamp and value
     correlated_measurement = (None, None)
 
-    best_measurement_timestamp = None
-    best_measurement_value = None
-
     # in seconds
     closest_timestamp_distance = 999999
+
+    best_measurement_timestamp = None
+    best_measurement_value = None
 
     for row in search_space[sensor_site]:
         # TODO empty and None checks for row
 
         # determine best result
-
-        best_measurement_timestamp = None
-        best_measurement_value = None
 
         # check if the timestamp in this row is better
         if best_measurement_timestamp is None:
@@ -367,9 +367,6 @@ def correlate_with_dnv_flow_reading(cnv_rainfall_timestamp, search_space, sensor
         # TODO empty and None checks for row
 
         # determine best result
-
-        best_measurement_timestamp = None
-        best_measurement_value = None
 
         # check if the timestamp in this row is better
         if best_measurement_timestamp is None:
@@ -436,8 +433,6 @@ def compile_rainfall_event_data(db_config_filename, db_importer):
                     for rainfall_event in rainfall_events:
                         (start_datetime, end_datetime, event_id) = rainfall_event
 
-                        compiled_event_data = {}
-
                         # get dnv whitewater window for this rainfall event (start_datetime - 5, end_datetime + 5)
                         dnv_whitewater_data_window = get_dnv_whitewater_data_window(
                             cursor, start_datetime, end_datetime
@@ -452,6 +447,7 @@ def compile_rainfall_event_data(db_config_filename, db_importer):
                         for cnv_rainfall_measurement in load_cnv_rainfall_data(cursor, start_datetime, end_datetime):
 
                             # pprint(cnv_rainfall_measurement)
+                            compiled_event_data = dict()
 
                             # set rainfall event id
                             compiled_event_data[
@@ -518,10 +514,10 @@ def compile_rainfall_event_data(db_config_filename, db_importer):
 
                                 db_importer.add(data_entry)
 
+                                compiled_measurement_count += 1
+
                                 print("\r\tRainfall Event measurements processed: %d" %
                                       compiled_measurement_count, end='', flush=True)
-
-                                compiled_measurement_count += 1
 
                     event_compilation_processing_elapsed_time = (timeit.default_timer() -
                                                                  event_compilation_processing_start_time
