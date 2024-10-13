@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logging.getLogger("RainfallEventMeasurementsDataEntry").setLevel(logging.INFO)
 logging.getLogger("DBImporter").setLevel(logging.INFO)
-
+TRACE_LOGGING = False
 ########################
 ##########
 
@@ -303,7 +303,8 @@ def get_cosmo_data_window(cursor, range_start_datetime, range_end_datetime):
 # return a cosmo conductance within the correlation threshold for cnv_timestamp.
 # if multiple results in the search window are returned from the database, return the one nearest to the cnv_timestamp
 def correlate_with_cosmo_conductance(cnv_rainfall_timestamp, search_space, sensor_site):
-    logger.debug("Attempting to correlate a CoSMo measurement with CNV Rainfall timestamp %s for site %s"
+    if TRACE_LOGGING:
+        logger.debug("Attempting to correlate a CoSMo measurement with CNV Rainfall timestamp %s for site %s"
                  % (cnv_rainfall_timestamp, sensor_site))
 
     # default measurement is a tuple with None values for measurement timestamp and value
@@ -333,13 +334,15 @@ def correlate_with_cosmo_conductance(cnv_rainfall_timestamp, search_space, senso
                 best_measurement_timestamp = row[0]
                 best_measurement_value = float(row[1])
 
-                logger.debug("Found new best CoSMo measurement %s => %s." %
-                             (best_measurement_timestamp, best_measurement_value))
+                if TRACE_LOGGING:
+                    logger.debug("Found new best CoSMo measurement %s => %s." %
+                                 (best_measurement_timestamp, best_measurement_value))
 
                 closest_timestamp_distance = timestamp_distance
             else:
                 # this measurement is not closer to the cnv timestamp than the existing best measurement
-                logger.debug("Sticking with existing best CoSMo measurement. Continuing...")
+                if TRACE_LOGGING:
+                    logger.debug("Sticking with existing best CoSMo measurement. Continuing...")
 
     if best_measurement_timestamp is not None and best_measurement_value is not None:
         correlated_measurement = (best_measurement_timestamp, best_measurement_value)
@@ -351,8 +354,9 @@ def correlate_with_cosmo_conductance(cnv_rainfall_timestamp, search_space, senso
 # if multiple results in the search window are returned from the database, return the one nearest to the cnv_timestamp
 # search_space is a dict of sites bound to arrays of rows
 def correlate_with_dnv_flow_reading(cnv_rainfall_timestamp, search_space, sensor_site):
-    logger.debug("Attempting to correlate a DNV Whitewater measurement with CNV Rainfall timestamp %s"
-                 % cnv_rainfall_timestamp)
+    if TRACE_LOGGING:
+        logger.debug("Attempting to correlate a DNV Whitewater measurement with CNV Rainfall timestamp %s"
+                     % cnv_rainfall_timestamp)
 
     # default measurement is a tuple with None values for measurement timestamp and value
     correlated_measurement = (None, None)
@@ -381,13 +385,15 @@ def correlate_with_dnv_flow_reading(cnv_rainfall_timestamp, search_space, sensor
                 best_measurement_timestamp = row[0]
                 best_measurement_value = float(row[1])
 
-                logger.debug("Found new best DNV Whitewater measurement %s => %s." %
-                             (best_measurement_timestamp, best_measurement_value))
+                if TRACE_LOGGING:
+                    logger.debug("Found new best DNV Whitewater measurement %s => %s." %
+                                 (best_measurement_timestamp, best_measurement_value))
 
                 closest_timestamp_distance = timestamp_distance
             else:
                 # this measurement is not closer to the cnv timestamp than the existing best measurement
-                logger.debug("Sticking with existing best DNV Whitewater measurement. Continuing...")
+                if TRACE_LOGGING:
+                    logger.debug("Sticking with existing best DNV Whitewater measurement. Continuing...")
 
     if best_measurement_timestamp is not None and best_measurement_value is not None:
         correlated_measurement = (best_measurement_timestamp, best_measurement_value)
@@ -507,7 +513,8 @@ def compile_rainfall_event_data(db_config_filename, db_importer):
                                     RainfallEventMeasurementsDataEntry.COSMO_CONDUCTANCE_RESULT_FIELD
                                 ] = conductance_value
 
-                                logger.debug("Final compiled event data entry: %s" % final_compiled_event_data)
+                                if TRACE_LOGGING:
+                                    logger.debug("Final compiled event data entry: %s" % final_compiled_event_data)
 
                                 data_entry = RainfallEventMeasurementsDataEntry(final_compiled_event_data)
                                 data_entry.set_db_destination(sensor_site)
