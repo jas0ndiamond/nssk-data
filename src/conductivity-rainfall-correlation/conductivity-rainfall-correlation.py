@@ -92,7 +92,8 @@ def precheck(conf_file):
                 database=config[DBConfig.CONFIG_DBASE],
         ) as connection:
             target_db = config[DBConfig.CONFIG_DBASE]
-            config = None
+            config[DBConfig.CONFIG_PASS] = None
+            config[DBConfig.CONFIG_USER] = None
 
             try:
                 with connection.cursor() as cursor:
@@ -155,12 +156,13 @@ def precheck(conf_file):
         logger.error("Error connecting to database", e)
 
 
-# return start and end dates for cosmo conductivity, and cnv rainfall measurements
+# return start and end dates for both cosmo conductivity measurements, and cnv rainfall measurements
 def get_measurement_date_windows(cursor, sensor_name):
     ###################
     # determine cosmo start datetime (earliest conductivity measurement)
     # cosmo datetimes are split across date and time fields
 
+    # TODO move this and other template reads to precheck
     cosmo_date_search_template = Template(open("sql/get-cosmo-timestamp.sql.template").read())
     cosmo_date_search_sql = cosmo_date_search_template.substitute(DB=SOURCE_DB_NSSK_COSMO,
                                                                   SITE=sensor_name,
@@ -205,7 +207,8 @@ def get_measurement_date_windows(cursor, sensor_name):
     else:
         # TODO: custom exception
         raise Exception(
-            "Could not determine latest conductivity measurement timestamp for site %s in target database" % sensor_name)
+            "Could not determine latest conductivity measurement timestamp for site %s in target database" % sensor_name
+        )
 
     log_msg = "Determined latest conductivity measurement timestamp %s" % cosmo_end_time
     logger.info(log_msg)
@@ -233,7 +236,9 @@ def get_measurement_date_windows(cursor, sensor_name):
     else:
         # TODO: custom exception
         raise Exception(
-            "Could not determine earliest rainfall measurement timestamp for site %s in target database" % SOURCE_DB_CNV_RAINFALL_SITE)
+            "Could not determine earliest rainfall measurement timestamp for site %s in target database" %
+            SOURCE_DB_CNV_RAINFALL_SITE
+        )
 
     log_msg = "Determined earliest rainfall measurement timestamp %s" % cnv_rainfall_start_time
     logger.info(log_msg)
@@ -259,7 +264,9 @@ def get_measurement_date_windows(cursor, sensor_name):
     else:
         # TODO: custom exception
         raise Exception(
-            "Could not determine latest rainfall measurement timestamp for site %s in target database" % SOURCE_DB_CNV_RAINFALL_SITE)
+            "Could not determine latest rainfall measurement timestamp for site %s in target database" %
+            SOURCE_DB_CNV_RAINFALL_SITE
+        )
 
     log_msg = "Determined latest rainfall measurement timestamp %s" % cnv_rainfall_end_time
     logger.info(log_msg)
@@ -292,25 +299,26 @@ def run_correlation(sensor_name, db_config_filename, db_importer):
             try:
                 with connection.cursor() as cursor:
 
+                    #
                     (cosmo_start_time,
                      cosmo_end_time,
                      cnv_rainfall_start_time,
                      cnv_rainfall_end_time) = get_measurement_date_windows(cursor, sensor_name)
 
                     ###################
-                    # date determinations
+                    # date determinations - debug
 
-                    print(("==========\n" +
-                           "cosmo_start_time: %s\n" +
-                           "cosmo_end_time: %s\n" +
-                           "cnv_rainfall_start_time: %s\n" +
-                           "cnv_rainfall_end_time: %s"
-                           ) %
-                          (cosmo_start_time,
-                           cosmo_end_time,
-                           cnv_rainfall_start_time,
-                           cnv_rainfall_end_time)
-                          )
+                    # print(("==========\n" +
+                    #        "cosmo_start_time: %s\n" +
+                    #        "cosmo_end_time: %s\n" +
+                    #        "cnv_rainfall_start_time: %s\n" +
+                    #        "cnv_rainfall_end_time: %s"
+                    #        ) %
+                    #       (cosmo_start_time,
+                    #        cosmo_end_time,
+                    #        cnv_rainfall_start_time,
+                    #        cnv_rainfall_end_time)
+                    #       )
 
                     # TODO dynamically determine the outer interval from these 4 dates
                     # have to start at the latest of first cosmo conductivity/cnv rainfall readings
@@ -321,11 +329,13 @@ def run_correlation(sensor_name, db_config_filename, db_importer):
                     ###################
                     # correlation
 
+                    # this query will return duplicates unless there is a distinct selection of COSMO_TIMESTAMP as
+                    # cosmo measurements may correlate with multiple cnv rainfall measurements
                     correlation_query_template = Template(
-                        open("sql/correlate-conductivity-and-rainfall.sql.template").read())
+                        open("sql/correlate-conductivity-and-rainfall.sql.template").read()
+                    )
 
-                    # TODO how hard do we want to lean on the query for this?
-                    #
+                    # TODO: graceful termination if file can't be read. move to precheck
 
                     # resolve conductivity values for times in the sensor table
 
@@ -333,13 +343,17 @@ def run_correlation(sensor_name, db_config_filename, db_importer):
 
                     correlated_value_count = 0
 
-                    # cosmo_block_query = Template(open("sql/cosmo-block-query.sql.template").read())
-
                     cosmo_date_i = cosmo_start_time
 
                     correlation_processing_start_time = timeit.default_timer()
 
                     # for each cosmo conductivity measurement in our cosmo data, in time chunks of CORRELATION_INCREMENT
+                    # cosmo_start_time is the first cosmo measurement
+                    # cosmo_end_time is the last cosmo measurement
+                    # start at (cosmo_start_time - 1), query will step over cosmo measurements in this manner:
+                    # datetime_field > step_start
+                    # datetime field <= step_end
+                    # TODO: more words #########
                     while cosmo_date_i <= cosmo_end_time:
                         # retrieve a block of sensor data.
                         # should be okay if end date is past cosmo_end_time- nothing will be pulled from the db
