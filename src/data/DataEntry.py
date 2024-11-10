@@ -5,8 +5,8 @@ from datetime import datetime
 
 class DataEntry:
 
-    # row_obj is any structure that can be indexed and is iterable
-    # csv, json, raw array
+    # row_obj is any structure that has a key-value mapping and is iterable
+    # dict, csv, json
     # TODO: maybe standardize on dict. defer dict creation to the import, who will have context
     def __init__(self, entry_obj):
 
