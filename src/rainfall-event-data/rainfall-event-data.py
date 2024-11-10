@@ -305,7 +305,7 @@ def get_cosmo_data_window(cursor, range_start_datetime, range_end_datetime):
 def correlate_with_cosmo_conductance(cnv_rainfall_timestamp, search_space, sensor_site):
     if TRACE_LOGGING:
         logger.debug("Attempting to correlate a CoSMo measurement with CNV Rainfall timestamp %s for site %s"
-                 % (cnv_rainfall_timestamp, sensor_site))
+                     % (cnv_rainfall_timestamp, sensor_site))
 
     # default measurement is a tuple with None values for measurement timestamp and value
     correlated_measurement = (None, None)
