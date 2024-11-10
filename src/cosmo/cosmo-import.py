@@ -3,6 +3,8 @@ import timeit
 import argparse
 import logging
 
+# TODO need path_root modifier like in other importers?
+
 from datetime import datetime
 from CosmoDataEntry import CosmoDataEntry
 from src.importer.DBImporter import DBImporter
@@ -95,8 +97,10 @@ cosmo_schema = [
     "ActivityMediaName",
     "ActivityStartDate",
     "ActivityStartTime",
+    "ActivityStartTimeZone",
     "ActivityEndDate",
     "ActivityEndTime",
+    "ActivityEndTimeZone",
     "ActivityDepthHeightMeasure",
     "ActivityDepthHeightUnit",
     "SampleCollectionEquipmentName",
@@ -237,8 +241,7 @@ def main(parsed_args):
                     # push object into collection
                     # log collection at end to file
 
-                    logger.error("Error constructing CosmoDataEntry")
-                    logger.error(e)
+                    logger.error("Error constructing CosmoDataEntry", e)
 
                     invalid_rows.append(row)
                     invalid_row_count += 1
