@@ -162,21 +162,30 @@ cython_debug/
 .idea/
 
 ##################
+# local resources
 config.json
 notes.txt
 db.json
 
+# config files
 conf/*.json
 
+# likely test sql scripts
 docker/setup/*.sql
 src/*/*.sql
 
+# any test data dumps
 *.csv
 
+# test output files
 output
 
 #dnv-whitewater*.json
 #cnv-rainfall.json
 
+# dist resources
 src/distribution/tmp/
 src/distribution/nssk-data-dist.zip
+
+# updater config file
+src/update-datasets/conf/config.json
