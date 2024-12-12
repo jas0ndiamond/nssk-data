@@ -174,7 +174,7 @@ def main(parsed_args):
     if getattr(parsed_args, "db_cfg_file") is not None:
         db_config_filename = getattr(parsed_args, "db_cfg_file")[0]
 
-    if getattr(parsed_args, "dryrun") is not None:
+    if getattr(parsed_args, "dry_run") is not None:
         # dry run - don't need a db config file since there's no db interaction
         log_msg = "Executing dry run"
         logger.info(log_msg)
@@ -312,10 +312,14 @@ if __name__ == "__main__":
 
     # reads sys.argv
     parser = argparse.ArgumentParser(description='Import data from a CoSMo data dump into a configured database.')
-    parser.add_argument('--dry-run', action='store_const', const=1, dest='dryrun',
+    parser.add_argument('-q', '--quiet', action='store_true', dest='quiet',
+                        help='Quiet mode. Limits ncurses status output and similar.')
+    parser.add_argument('--dry-run', action='store_true', dest='dry_run',
                         help='Output database insert statements. Does not write to database.')
-    parser.add_argument('-cfg', nargs=1, dest='db_cfg_file', help='Database config file in json format. Ex: cosmo.json')
-    parser.add_argument(nargs=1, dest='data_dump_file', help='CoSMo data dump file. Ex: doi.org_10.25976_0gvo-9d12.csv')
+    parser.add_argument('-cfg', '--config-file', type=str, dest='db_cfg_file',
+                        help='Database config file in json format. Ex: cosmo.json')
+    parser.add_argument(nargs=1, dest='data_dump_file', type=str,
+                        help='CoSMo data dump file. Ex: doi.org_10.25976_0gvo-9d12.csv')
 
     # call main with parsed args
     main(parser.parse_args())
