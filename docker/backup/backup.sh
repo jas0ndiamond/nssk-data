@@ -32,7 +32,7 @@ fi
 
 TIMESTAMP=$(date +"%Y-%m-%d_%H%m%S")
 DUMP_FILE=$BACKUP_DIR/nssk_dump_"$TIMESTAMP".sql
-DUMP_SYSTEM_FILE=$BACKUP_DIR/nssk_dump_system_"$TIMESTAMP".sql
+#DUMP_SYSTEM_FILE=$BACKUP_DIR/nssk_dump_system_"$TIMESTAMP".sql
 
 echo "Dumping database tables to $DUMP_FILE"
 mysqldump\
@@ -42,10 +42,12 @@ mysqldump\
  --password="$CRED"\
  --all-databases > "$DUMP_FILE"
 
-echo "Dumping database system state to $DUMP_SYSTEM_FILE"
-mysqldump\
- -u $USER\
- -P "$PORT"\
- -h $HOST\
- --password="$CRED"\
- --system=all > "$DUMP_SYSTEM_FILE"
+# TODO: sort out permissions and retry
+#echo "Dumping database system state to $DUMP_SYSTEM_FILE"
+#mysqldump\
+# -u $USER\
+# -P "$PORT"\
+# -h $HOST\
+# --password="$CRED"\
+# --system=all > "$DUMP_SYSTEM_FILE"
+
