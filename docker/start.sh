@@ -4,7 +4,12 @@
 
 # --restart=unless-stopped\
 
+# TODO: move to config file
 CONFIG_FILE="config.json"
+LISTEN_NIC="192.168.1.101"
+CONTAINER_SUBNET="9.9.1.0/24"
+CONTAINER_GATEWAY="9.9.1.1"
+
 DB_SETUP_SCRIPT="docker-entrypoint-initdb.d/0_nssk_setup.sql"
 
 if [ ! -f $CONFIG_FILE ]; then
@@ -32,7 +37,7 @@ echo "Starting container"
 docker run\
  --name=nssk-data\
  --network=nssk-network\
- -p 53306:3306\
+ -p "$IP":23306:3306\
  --cpus=2\
  --memory=2.5g\
  -e MYSQL_ROOT_PASSWORD="$(jq -r '."setup-pass"' < $CONFIG_FILE)"\

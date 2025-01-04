@@ -1,6 +1,6 @@
 {
     "host": "mydbhost",
-    "port": 53306,
+    "port": 23306,
     "setup-user": "root",
     "setup-pass": "root-pass",
     "users": {
@@ -8,5 +8,14 @@
         "nssk-import": "nssk-import-pass",
         "nssk-backup": "nssk-backup-pass",
         "nssk-admin": "nssk-admin-pass"
+    },
+    "network": {
+        "LISTEN_IP": "192.168.my.ip",
+        "LISTEN_PORT": 23306,
+        "LOCAL_NETWORK": "192.168.%.%",
+        "CONTAINER_NETWORK": "9.9.1.%",
+        "CONTAINER_SUBNET": "9.9.1.0/24",
+        "CONTAINER_GATEWAY": "9.9.1.0/24",
+        "WAN_NETWORK": "9.9.1.1"
     }
 }
