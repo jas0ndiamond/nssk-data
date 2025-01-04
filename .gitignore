@@ -189,3 +189,5 @@ src/distribution/nssk-data-dist.zip
 
 # updater config file
 src/update-datasets/conf/config.json
+
+todo.txt
