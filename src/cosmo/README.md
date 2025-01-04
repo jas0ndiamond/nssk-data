@@ -14,7 +14,7 @@ Imports data from CoSMo CSV data dumps into a MySQL database
 
 `cd src/cosmo`
 
-`../../venv/bin/python3 cosmo-import.py -cfg ../../conf/cosmo.json ~/Pub/nssk-data-dumps/doi.org_10.25976_0gvo-9d12.csv`
+`../../venv/bin/python3 cosmo-import.py -cfg ../../conf/cosmo.json /path/to/nssk-data-dumps/doi.org_10.25976_0gvo-9d12.csv`
 
 ---
 ## Notes

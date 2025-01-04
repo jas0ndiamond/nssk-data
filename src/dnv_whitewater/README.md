@@ -14,7 +14,7 @@ Imports data from DNV Whitewater JSON data dumps into a MySQL database
 
 `cd src/dnv_whitewater`
 
-`../../venv/bin/python3 dnv-whitewater-import.py -cfg ../../conf/dnv-whitewater.json ~/Pub/nssk-data-dumps/20240824-174208_dnv_whitewater.json`
+`../../venv/bin/python3 dnv-whitewater-import.py -cfg ../../conf/dnv-whitewater.json /path/to/nssk-data-dumps/20240824-174208_dnv_whitewater.json`
 
 ---
 ## Notes

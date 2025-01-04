@@ -14,7 +14,7 @@ Imports data from CNV Rainfall CSV data dumps into a MySQL database
 
 `cd src/cnv_rainfall`
 
-`../../venv/bin/python3 cnv-rainfall-import.py -cfg ../../conf/cnv-rainfall.json ~/Pub/nssk-data-dumps/North_Vancouver_City_Hall_export_20240824163544.csv`
+`../../venv/bin/python3 cnv-rainfall-import.py -cfg ../../conf/cnv-rainfall.json /path/to/nssk-data-dumps/North_Vancouver_City_Hall_export_20240824163544.csv`
 
 ---
 ## Notes
