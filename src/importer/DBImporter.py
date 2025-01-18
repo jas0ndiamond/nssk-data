@@ -2,6 +2,7 @@ from mysql.connector import connect, Error, IntegrityError
 from datetime import datetime
 
 import logging
+import os
 
 from src.importer.DBConfig import DBConfig
 from src.importer.DBConfigFactory import DBConfigFactory
@@ -19,6 +20,9 @@ class DBImporter:
         self.logger.setLevel(logging.DEBUG)
 
         self.logger.info("Building DBImporter with config file %s" % db_config_file)
+
+        if not os.path.isfile(db_config_file):
+            raise FileNotFoundError("Could not find DB config file '%s'" % db_config_file)
 
         # store the file name, read it when we're ready for the db inserts
         self.db_config_file = db_config_file
