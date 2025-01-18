@@ -2,28 +2,119 @@
 
 # run from same directory
 
+# TODO: re-enable?
+# can be problematic if database is misconfigured
 # --restart=unless-stopped\
 
-# TODO: move to config file
-CONFIG_FILE="config.json"
-LISTEN_NIC="192.168.1.101"
-CONTAINER_SUBNET="9.9.1.0/24"
-CONTAINER_GATEWAY="9.9.1.1"
+########################
 
-DB_SETUP_SCRIPT="docker-entrypoint-initdb.d/0_nssk_setup.sql"
+CONFIG_FILE=$1
 
-if [ ! -f $CONFIG_FILE ]; then
-  echo "Missing config file $CONFIG_FILE. Create this file from the template."
+if [ -z "$CONFIG_FILE" ]; then
+  echo "Usage: ./start.sh config.json"
   exit 1
 fi
 
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "Missing config file '$CONFIG_FILE'. Create this file from the template."
+  exit 1
+fi
+
+##################################
+# check if we have jq
+which jq > /dev/null
+RESULT=$?
+
+if [ $RESULT -ne 0 ]; then
+  echo "Could not find jq on PATH. Please install jq. Exiting..."
+  exit 1
+fi
+
+########################
+# read parameters
+
+CONTAINER_NAME="$(jq -r '.container_name' < "$CONFIG_FILE")"
+if [ "$CONTAINER_NAME" == "null" ] || [ -z "$CONTAINER_NAME" ]; then
+  echo "container_name not readable from config"
+  exit 1
+fi
+
+IMAGE_NAME="$(jq -r '.image_name' < "$CONFIG_FILE")"
+if [ "$IMAGE_NAME" == "null" ] || [ -z "$IMAGE_NAME" ]; then
+  echo "image_name not readable from config"
+  exit 1
+fi
+
+LISTEN_IP="$(jq -r '.network.listen_ip' < "$CONFIG_FILE")"
+if [ "$LISTEN_IP" == "null" ] || [ -z "$LISTEN_IP" ]; then
+  echo "network.listen_ip not readable from config"
+  exit 1
+fi
+
+LISTEN_PORT="$(jq -r '.network.listen_port' < "$CONFIG_FILE")"
+if [ "$LISTEN_PORT" == "null" ] || [ -z "$LISTEN_PORT" ]; then
+  echo "network.listen_port not readable from config"
+  exit 1
+fi
+
+NETWORK_NAME="$(jq -r '.network.name' < "$CONFIG_FILE")"
+if [ "$NETWORK_NAME" == "null" ] || [ -z "$NETWORK_NAME" ]; then
+  echo "network.name not readable from config"
+  exit 1
+fi
+
+CONTAINER_SUBNET="$(jq -r '.network.container_subnet' < "$CONFIG_FILE")"
+if [ "$CONTAINER_SUBNET" == "null" ] || [ -z "$CONTAINER_SUBNET" ]; then
+  echo "network.container_subnet not readable from config"
+  exit 1
+fi
+
+CONTAINER_GATEWAY="$(jq -r '.network.container_gateway' < "$CONFIG_FILE")"
+if [ "$CONTAINER_GATEWAY" == "null" ] || [ -z "$CONTAINER_GATEWAY" ]; then
+  echo "network.container_gateway not readable from config"
+  exit 1
+fi
+
+SETUP_PASS="$(jq -r '.setup_pass' < "$CONFIG_FILE")"
+if [ "$SETUP_PASS" == "null" ] || [ -z "$SETUP_PASS" ]; then
+  echo "setup_pass not readable from config"
+  exit 1
+fi
+
+CPU_COUNT="$(jq -r '.resources.cpu_count' < "$CONFIG_FILE")"
+if [ "$CPU_COUNT" == "null" ] || [ -z "$CPU_COUNT" ]; then
+  echo "resources.cpu_count not readable from config"
+  exit 1
+fi
+
+MEMORY_AMT="$(jq -r '.resources.memory' < "$CONFIG_FILE")"
+if [ "$MEMORY_AMT" == "null" ] || [ -z "$MEMORY_AMT" ]; then
+  echo "resources.memory not readable from config"
+  exit 1
+fi
+
+MEMORY_SWAP_AMT="$(jq -r '.resources.memory_swap' < "$CONFIG_FILE")"
+if [ "$MEMORY_SWAP_AMT" == "null" ] || [ -z "$MEMORY_SWAP_AMT" ]; then
+  echo "resources.memory_swap not readable from config"
+  exit 1
+fi
+
+#########################
+
+# native default port, container networking forwards a non-default port to this
+MYSQL_PORT=3306
+
+#DB_SETUP_SCRIPT="docker-entrypoint-initdb.d/0_nssk_setup.sql"
+
 # build network if it's not already built
 echo "Building network"
-if [[ -z $(docker network ls | grep nssk-network) ]]; then
-	echo "Creating nssk-network network"
-	docker network create --driver=bridge --subnet=9.9.1.0/24 --gateway=9.9.1.1 nssk-network
+if [[ -z $(docker network ls | grep "$NETWORK_NAME") ]]; then
+	echo "Creating $NETWORK_NAME network"
+
+	# TODO confirm success
+	docker network create --driver=bridge --subnet="$CONTAINER_SUBNET" --gateway="$CONTAINER_GATEWAY" "$NETWORK_NAME"
 else
-	echo "nssk-network exists. Skipping creation"
+	echo "Network $NETWORK_NAME exists. Skipping creation"
 fi
 
 # docker run will create the mounts if they don't already exist
@@ -35,17 +126,18 @@ fi
 # start container
 echo "Starting container"
 docker run\
- --name=nssk-data\
- --network=nssk-network\
- -p "$IP":23306:3306\
- --cpus=2\
- --memory=2.5g\
- -e MYSQL_ROOT_PASSWORD="$(jq -r '."setup-pass"' < $CONFIG_FILE)"\
+ --name="$CONTAINER_NAME"\
+ --network="$NETWORK_NAME"\
+ -p "$LISTEN_IP":"$LISTEN_PORT":"$MYSQL_PORT"\
+ --cpus="$CPU_COUNT"\
+ --memory="$MEMORY_AMT"\
+ --memory-swap="$MEMORY_SWAP_AMT"\
+ -e MYSQL_ROOT_PASSWORD="$SETUP_PASS"\
  -v "$(pwd)"/data:/var/lib/mysql\
  -v "$(pwd)"/conf.d:/etc/mysql/conf.d\
  -v "$(pwd)"/mysql:/var/log/mysql\
  -d\
- nssk-mysql &&
+ "$IMAGE_NAME" &&
 
 # TODO: may not always have logging enabled. add a switch for this or detect it from files in 'nssk-data/mysql'
 # TODO: wait on container healthcheck
@@ -54,14 +146,14 @@ echo "Waiting to start fail2ban" &&
 sleep 40 &&
 
 echo "Starting fail2ban" &&
-docker exec -it nssk-data /etc/init.d/fail2ban start &&
+docker exec -it "$CONTAINER_NAME" /etc/init.d/fail2ban start &&
 sleep 10 &&
-docker exec -it nssk-data /etc/init.d/fail2ban status &&
+docker exec -it "$CONTAINER_NAME" /etc/init.d/fail2ban status &&
 echo "Removing setup script from container filesystem" &&
-docker exec -it nssk-data rm -v /docker-entrypoint-initdb.d/1_create_users.sql
+docker exec -it "$CONTAINER_NAME" rm -v /docker-entrypoint-initdb.d/1_create_users.sql
 
 # Confirm that 1_create_users.sql was deleted from /docker-entrypoint-initdb.d/
-if docker exec -it nssk-data sh -c "test -f /docker-entrypoint-initdb.d/1_create_users.sql"; then
+if docker exec -it "$CONTAINER_NAME" sh -c "test -f /docker-entrypoint-initdb.d/1_create_users.sql"; then
   echo "WARNING: Failed to delete /docker-entrypoint-initdb.d/1_create_users.sql from container filesystem."
 else
   echo "Successfully deleted user setup script from container filesystem"
