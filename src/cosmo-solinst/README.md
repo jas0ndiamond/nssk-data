@@ -7,13 +7,14 @@ Imports from Solinst Instrument raw CSV data dumps into a MySQL database
 
 1. Create a database config file from the template in nssk-data/conf for the database that will house the imported data.
 2. Acquire the data dump from whoever has access to the raw data dumps.
+3. Remove any preamble to the file so that the CSV schema is the first line.
 
 ---
 ## Run
 
 `cd src/cosmo-solinst`
 
-`../../venv/bin/python3 cosmo-solinst-import.py -cfg ../../conf/cosmo.json [SITE] [OFFSET] [DUMP_FILE]`
+`../../venv/bin/python3 cosmo-solinst-import.py -cfg ../../conf/cosmo.json [SITE] [DUMP_FILE]`
 
 ---
 ## Notes
