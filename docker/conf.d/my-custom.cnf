@@ -22,3 +22,7 @@ long_query_time = 30
 # most users will not be accessing from meaningful hosts.
 # web-facing database will see a lot of bot traffic and host name resolution will impact performance.
 skip-name-resolve
+
+# TODO set explicitly
+#mysqlx-bind-address=xxx.xxx.xxx.xxx
+mysqlx-port=3061
