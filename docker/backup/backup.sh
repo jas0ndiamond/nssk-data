@@ -10,8 +10,8 @@ if [ ! -f "$CRED_FILE" ]; then
   exit 1
 fi
 
-HOST="localhost"
 USER="nssk_backup"
+HOST="$(jq -r '.host' < "$CRED_FILE")"
 PORT="$(jq -r '.port' < "$CRED_FILE")"
 CRED="$(jq -r '.users.nssk_backup' < "$CRED_FILE")"
 
