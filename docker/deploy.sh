@@ -2,11 +2,11 @@
 
 # non-destructively remove and re-create the nssk-data container
 
+# dont mind if the container doesn't exist
 docker stop nssk-data
 docker rm nssk-data
 
-#sudo rm -rf ./data/*
+# leave /data/ directory alone
 
-docker build -t nssk-mysql .
-
+./build.sh db-setup.json &&
 ./start.sh db-setup.json
