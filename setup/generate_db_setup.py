@@ -1,5 +1,7 @@
 import sys
 import json
+import os
+from pathlib import Path
 from string import Template
 
 # set up the nssk mysql database
@@ -10,10 +12,8 @@ from string import Template
 # configures remote access
 
 # config file params
-DB_HOST = 'host'
-DB_PORT = 'port'
-DB_SETUP_USER = 'setup-user'
-DB_SETUP_USER_PASS = 'setup-pass'
+DB_SETUP_USER = 'setup_user'
+DB_SETUP_USER_PASS = 'setup_pass'
 
 # TODO: add to config file? Maybe not- each has a set of tables with variable schemas
 NSSK_COSMO_DB = "NSSK_COSMO"
@@ -30,10 +30,10 @@ DATABASES = [
     NSSK_RAINFALL_EVENT_DATA_DB
 ]
 
-# TODO: add to config file?
-LOCAL_NETWORK = "192.168.%.%"
-CONTAINER_NETWORK = "9.9.1.%"  # configured on container host
-WAN_NETWORK = "%"
+NETWORK_KEY = "network"
+LOCAL_NETWORK = "local_network"
+CONTAINER_NETWORK = "container_network"  # configured on container host
+WAN_NETWORK = "wan_network"
 
 NSSK_USERS_KEY = "users"
 NSSK_USER = "nssk"
@@ -82,7 +82,7 @@ conductivity_rainfall_correlation_sites = [
 #####################
 
 # Dockerfile and start.sh expect this file. do not make configurable
-scriptfile_target_dir = "../docker/setup/"
+scriptfile_target_dir = "../docker/database_setup/"
 create_db_scriptfile = "%s0_create_dbs.sql" % scriptfile_target_dir
 create_users_scriptfile = "%s1_create_users.sql" % scriptfile_target_dir
 create_nssk_cosmo_tables_scriptfile = "%s2_create_nssk_cosmo_tables.sql" % scriptfile_target_dir
@@ -107,6 +107,18 @@ create_rainfall_event_data_tables = []
 #############################
 
 def write_setup_scripts():
+
+    # check if the directory already exists
+    if not os.path.exists(scriptfile_target_dir):
+        # create the log dir if it doesn't exist
+        Path(scriptfile_target_dir).mkdir(parents=True, exist_ok=True)
+
+        # check that we succeeded
+        if not os.path.exists(scriptfile_target_dir):
+            e_msg = "Could not create database setup scripts directory '%s'." % scriptfile_target_dir
+            print(e_msg)
+            raise e_msg
+
     print("Writing db setup script to %s" % create_db_scriptfile)
     with open(create_db_scriptfile, 'w') as handle:
         handle.writelines("%s\n" % line for line in db_setup_statements)
@@ -186,28 +198,46 @@ def configure_users():
     # create nssk user
     # access from WAN, LAN, container networks
     user_setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
-                                 (NSSK_USER, WAN_NETWORK, config[NSSK_USERS_KEY][NSSK_USER]))
+                                 (NSSK_USER, config[NETWORK_KEY][WAN_NETWORK], config[NSSK_USERS_KEY][NSSK_USER]))
 
     # create nssk_import
     # access from LAN, container networks
     user_setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
-                                 (NSSK_IMPORT_USER, LOCAL_NETWORK, config[NSSK_USERS_KEY][NSSK_IMPORT_USER]))
+                                 (NSSK_IMPORT_USER,
+                                  config[NETWORK_KEY][LOCAL_NETWORK],
+                                  config[NSSK_USERS_KEY][NSSK_IMPORT_USER])
+                                 )
+
     user_setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
-                                 (NSSK_IMPORT_USER, CONTAINER_NETWORK, config[NSSK_USERS_KEY][NSSK_IMPORT_USER]))
+                                 (NSSK_IMPORT_USER,
+                                  config[NETWORK_KEY][CONTAINER_NETWORK],
+                                  config[NSSK_USERS_KEY][NSSK_IMPORT_USER])
+                                 )
 
     # create nssk_backup
     # access from LAN, container networks
     user_setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
-                                 (NSSK_BACKUP_USER, LOCAL_NETWORK, config[NSSK_USERS_KEY][NSSK_BACKUP_USER]))
+                                 (NSSK_BACKUP_USER,
+                                  config[NETWORK_KEY][LOCAL_NETWORK],
+                                  config[NSSK_USERS_KEY][NSSK_BACKUP_USER])
+                                 )
     user_setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
-                                 (NSSK_BACKUP_USER, CONTAINER_NETWORK, config[NSSK_USERS_KEY][NSSK_BACKUP_USER]))
+                                 (NSSK_BACKUP_USER,
+                                  config[NETWORK_KEY][CONTAINER_NETWORK],
+                                  config[NSSK_USERS_KEY][NSSK_BACKUP_USER])
+                                 )
 
     # create nssk_backup
     # access from LAN, container networks
     user_setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
-                                 (NSSK_ADMIN_USER, LOCAL_NETWORK, config[NSSK_USERS_KEY][NSSK_ADMIN_USER]))
+                                 (NSSK_ADMIN_USER,
+                                  config[NETWORK_KEY][LOCAL_NETWORK],
+                                  config[NSSK_USERS_KEY][NSSK_ADMIN_USER]))
+
     user_setup_statements.append("CREATE USER '%s'@'%s' IDENTIFIED BY '%s';" %
-                                 (NSSK_ADMIN_USER, CONTAINER_NETWORK, config[NSSK_USERS_KEY][NSSK_ADMIN_USER]))
+                                 (NSSK_ADMIN_USER,
+                                  config[NETWORK_KEY][CONTAINER_NETWORK],
+                                  config[NSSK_USERS_KEY][NSSK_ADMIN_USER]))
 
     # no longer need passwords
     config[DB_SETUP_USER_PASS] = None
@@ -226,53 +256,57 @@ def configure_users():
     # allow nssk user select access to databases
     for database in DATABASES:
         # WAN_NETWORK is a wildcard so should not need to add LOCAL_NETWORK and CONTAINER_NETWORK
-        user_setup_statements.append("GRANT SELECT ON %s.* TO '%s'@'%s';" % (database, NSSK_USER, WAN_NETWORK))
+        user_setup_statements.append("GRANT SELECT ON %s.* TO '%s'@'%s';" % (
+            database,
+            NSSK_USER,
+            config[NETWORK_KEY][WAN_NETWORK])
+                                     )
 
     # allow nssk-import user select access to databases in case inserts need to make decisions
     # local and container networks only
     for database in DATABASES:
         user_setup_statements.append("GRANT SELECT ON %s.* TO '%s'@'%s';" %
-                                     (database, NSSK_IMPORT_USER, LOCAL_NETWORK))
+                                     (database, NSSK_IMPORT_USER, config[NETWORK_KEY][LOCAL_NETWORK]))
 
         user_setup_statements.append("GRANT SELECT ON %s.* TO '%s'@'%s';" %
-                                     (database, NSSK_IMPORT_USER, CONTAINER_NETWORK))
+                                     (database, NSSK_IMPORT_USER, config[NETWORK_KEY][CONTAINER_NETWORK]))
 
     # add write access to cosmo_data for nssk-import
     # local and container networks only
     for database in DATABASES:
         user_setup_statements.append("GRANT CREATE, INSERT, UPDATE, DELETE ON %s.* TO '%s'@'%s';" %
-                                     (database, NSSK_IMPORT_USER, LOCAL_NETWORK))
+                                     (database, NSSK_IMPORT_USER, config[NETWORK_KEY][LOCAL_NETWORK]))
 
         user_setup_statements.append("GRANT CREATE, INSERT, UPDATE, DELETE ON %s.* TO '%s'@'%s';" %
-                                     (database, NSSK_IMPORT_USER, CONTAINER_NETWORK))
+                                     (database, NSSK_IMPORT_USER, config[NETWORK_KEY][CONTAINER_NETWORK]))
 
     # allow nssk-admin write access
     # local and container networks only
     for database in DATABASES:
         user_setup_statements.append("GRANT ALL PRIVILEGES ON %s.* TO '%s'@'%s';" %
-                                     (database, NSSK_ADMIN_USER, LOCAL_NETWORK))
+                                     (database, NSSK_ADMIN_USER, config[NETWORK_KEY][LOCAL_NETWORK]))
 
         user_setup_statements.append("GRANT ALL PRIVILEGES ON %s.* TO '%s'@'%s';" %
-                                     (database, NSSK_ADMIN_USER, CONTAINER_NETWORK))
+                                     (database, NSSK_ADMIN_USER, config[NETWORK_KEY][CONTAINER_NETWORK]))
 
     # backup user permissions
     # local and container networks only
     for database in DATABASES:
         user_setup_statements.append(
             "GRANT SELECT, SHOW VIEW, TRIGGER, LOCK TABLES, EVENT, USAGE ON %s.* TO '%s'@'%s';" %
-            (database, NSSK_BACKUP_USER, LOCAL_NETWORK))
+            (database, NSSK_BACKUP_USER, config[NETWORK_KEY][LOCAL_NETWORK]))
 
         user_setup_statements.append(
             "GRANT SELECT, SHOW VIEW, TRIGGER, LOCK TABLES, EVENT, USAGE ON %s.* TO '%s'@'%s';" %
-            (database, NSSK_BACKUP_USER, CONTAINER_NETWORK))
+            (database, NSSK_BACKUP_USER, config[NETWORK_KEY][CONTAINER_NETWORK]))
 
     # backup needs global process privilege
     # local and container networks only
     user_setup_statements.append("GRANT PROCESS ON *.* TO '%s'@'%s';" %
-                                 (NSSK_BACKUP_USER, LOCAL_NETWORK))
+                                 (NSSK_BACKUP_USER, config[NETWORK_KEY][LOCAL_NETWORK]))
 
     user_setup_statements.append("GRANT PROCESS ON *.* TO '%s'@'%s';" %
-                                 (NSSK_BACKUP_USER, CONTAINER_NETWORK))
+                                 (NSSK_BACKUP_USER, config[NETWORK_KEY][CONTAINER_NETWORK]))
 
     print("Configuration of user privileges complete")
 
@@ -281,11 +315,13 @@ def limit_remote_root_login():
     # if using a non-root user to set up database, limit that user to only logging in on that host
     if config[DB_SETUP_USER] != 'root':
         user_setup_statements.append("DELETE FROM mysql.user WHERE User='%s' AND Host NOT IN "
-                                     "('localhost', '127.0.0.1', '%s');" % (config[DB_SETUP_USER], CONTAINER_NETWORK))
+                                     "('localhost', '127.0.0.1', '%s');" % (
+                                         config[DB_SETUP_USER],
+                                         config[NETWORK_KEY][CONTAINER_NETWORK]))
 
     # specifically limit root
     user_setup_statements.append("DELETE FROM mysql.user WHERE User='root' AND Host NOT IN "
-                                 "('localhost', '127.0.0.1', '%s');" % CONTAINER_NETWORK)
+                                 "('localhost', '127.0.0.1', '%s');" % config[NETWORK_KEY][CONTAINER_NETWORK])
 
 
 def setup_cosmo_tables():
@@ -350,6 +386,10 @@ def setup_rainfall_event_data_tables():
         create_rainfall_event_data_tables.append(create_table_sql)
 
 
+def setup_container_startup_script():
+    pass
+
+
 # this may not be necessary any more
 # def setup_root_container_login():
 #     # let root login from container network. meant to be temporary
@@ -358,14 +398,14 @@ def setup_rainfall_event_data_tables():
 #
 #     if config[DB_SETUP_USER] != 'root':
 #         setup_statements.append("UPDATE mysql.user SET Host='%s' WHERE Host='localhost' AND User='%s'" %
-#                                 (config[DB_SETUP_USER], CONTAINER_NETWORK))
+#                                 (config[DB_SETUP_USER], config[NETWORK_KEY][CONTAINER_NETWORK]))
 #         setup_statements.append("UPDATE mysql.db SET Host='%s' WHERE Host='localhost' AND User='%s'" %
-#                                 (config[DB_SETUP_USER], CONTAINER_NETWORK))
+#                                 (config[DB_SETUP_USER], config[NETWORK_KEY][CONTAINER_NETWORK]))
 #     # root specifically
 #     setup_statements.append("UPDATE mysql.user SET Host='%s' WHERE Host='localhost' AND User='root'" %
-#                             CONTAINER_NETWORK)
+#                             config[NETWORK_KEY][CONTAINER_NETWORK])
 #     setup_statements.append("UPDATE mysql.db SET Host='%s' WHERE Host='localhost' AND User='root'" %
-#                             CONTAINER_NETWORK)
+#                             config[NETWORK_KEY][CONTAINER_NETWORK])
 #
 #     pass
 
@@ -374,8 +414,8 @@ def setup_rainfall_event_data_tables():
 def main(args):
     # find creds file from shell
 
-    usage_msg = "Usage: python3 generate_db_setup.py config.json\n"
-    "\tconfig.json: file storing credentials for necessary users "
+    usage_msg = "Usage: python3 generate_db_setup.py db-setup.json\n"
+    "\tdb-setup.json: file storing credentials for necessary users "
     "(nssk, nssk-import, nssk-admin, nssk-backup)"
 
     conf_file = None
@@ -448,6 +488,10 @@ def main(args):
     print("Creating Rainfall Event Data tables")
     setup_rainfall_event_data_tables()
     print("Rainfall Event Data tables completed")
+
+    print("Generating Container startup script")
+    setup_container_startup_script()
+    print("Container startup script generation completed")
 
     ###########
     # write our setup script files
