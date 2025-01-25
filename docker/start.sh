@@ -45,14 +45,14 @@ if [ "$IMAGE_NAME" == "null" ] || [ -z "$IMAGE_NAME" ]; then
   exit 1
 fi
 
-LISTEN_IP="$(jq -r '.network.listen_ip' < "$CONFIG_FILE")"
-if [ "$LISTEN_IP" == "null" ] || [ -z "$LISTEN_IP" ]; then
+DB_LISTEN_IP="$(jq -r '.network.listen_ip' < "$CONFIG_FILE")"
+if [ "$DB_LISTEN_IP" == "null" ] || [ -z "$DB_LISTEN_IP" ]; then
   echo "network.listen_ip not readable from config"
   exit 1
 fi
 
-LISTEN_PORT="$(jq -r '.network.listen_port' < "$CONFIG_FILE")"
-if [ "$LISTEN_PORT" == "null" ] || [ -z "$LISTEN_PORT" ]; then
+DB_LISTEN_PORT="$(jq -r '.network.listen_port' < "$CONFIG_FILE")"
+if [ "$DB_LISTEN_PORT" == "null" ] || [ -z "$DB_LISTEN_PORT" ]; then
   echo "network.listen_port not readable from config"
   exit 1
 fi
@@ -128,7 +128,7 @@ echo "Starting container"
 docker run\
  --name="$CONTAINER_NAME"\
  --network="$NETWORK_NAME"\
- -p "$LISTEN_IP":"$LISTEN_PORT":"$MYSQL_PORT"\
+ -p "$DB_LISTEN_IP":"$DB_LISTEN_PORT":"$MYSQL_PORT"\
  --cpus="$CPU_COUNT"\
  --memory="$MEMORY_AMT"\
  --memory-swap="$MEMORY_SWAP_AMT"\
