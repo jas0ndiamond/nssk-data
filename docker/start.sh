@@ -100,11 +100,17 @@ if [ "$MEMORY_SWAP_AMT" == "null" ] || [ -z "$MEMORY_SWAP_AMT" ]; then
 fi
 
 #########################
+# database
 
 # native default port, container networking forwards a non-default port to this
 MYSQL_PORT=3306
 
+MYSQL_ROOT_PW_FILE="mysql.txt"
+
 #DB_SETUP_SCRIPT="docker-entrypoint-initdb.d/0_nssk_setup.sql"
+
+#########################
+# network
 
 # build network if it's not already built
 echo "Building network"
@@ -132,7 +138,7 @@ docker run\
  --cpus="$CPU_COUNT"\
  --memory="$MEMORY_AMT"\
  --memory-swap="$MEMORY_SWAP_AMT"\
- -e MYSQL_ROOT_PASSWORD="$SETUP_PASS"\
+ -e MYSQL_ROOT_PASSWORD_FILE="/$MYSQL_ROOT_PW_FILE"\
  -v "$(pwd)"/data:/var/lib/mysql\
  -v "$(pwd)"/conf.d:/etc/mysql/conf.d\
  -v "$(pwd)"/mysql:/var/log/mysql\
@@ -150,13 +156,22 @@ docker exec -it "$CONTAINER_NAME" /etc/init.d/fail2ban start &&
 sleep 10 &&
 docker exec -it "$CONTAINER_NAME" /etc/init.d/fail2ban status &&
 echo "Removing setup script from container filesystem" &&
-docker exec -it "$CONTAINER_NAME" rm -v /docker-entrypoint-initdb.d/1_create_users.sql
+docker exec -it "$CONTAINER_NAME" rm -v /docker-entrypoint-initdb.d/1_create_users.sql &&
+echo "Removing cred file from container filesystem" &&
+docker exec -it "$CONTAINER_NAME" rm -v "$MYSQL_ROOT_PW_FILE"
 
 # Confirm that 1_create_users.sql was deleted from /docker-entrypoint-initdb.d/
 if docker exec -it "$CONTAINER_NAME" sh -c "test -f /docker-entrypoint-initdb.d/1_create_users.sql"; then
   echo "WARNING: Failed to delete /docker-entrypoint-initdb.d/1_create_users.sql from container filesystem."
 else
   echo "Successfully deleted user setup script from container filesystem"
+fi
+
+# Confirm that mysql.txt was deleted from /
+if docker exec -it "$CONTAINER_NAME" sh -c "test -f /$MYSQL_ROOT_PW_FILE"; then
+  echo "WARNING: Failed to delete $MYSQL_ROOT_PW_FILE from container filesystem."
+else
+  echo "Successfully deleted cred file from container filesystem"
 fi
 
 echo "Container startup completed. Move the config file and setup script to a secure location."

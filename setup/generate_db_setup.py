@@ -81,7 +81,7 @@ conductivity_rainfall_correlation_sites = [
 
 #####################
 
-# Dockerfile and start.sh expect this file. do not make configurable
+# Dockerfile and start.sh expect these files. do not make configurable
 scriptfile_target_dir = "../docker/database_setup/"
 create_db_scriptfile = "%s0_create_dbs.sql" % scriptfile_target_dir
 create_users_scriptfile = "%s1_create_users.sql" % scriptfile_target_dir
@@ -90,6 +90,8 @@ create_cnv_rainfall_tables_scriptfile = "%s3_create_cnv_rainfall_tables.sql" % s
 create_dnv_whitewater_tables_scriptfile = "%s4_create_dnv_whitewater_tables.sql" % scriptfile_target_dir
 create_conductivity_rainfall_correlation_tables_scriptfile = "%s5_create_conductivity_rainfall_correlation_tables.sql" % scriptfile_target_dir
 create_rainfall_event_data_tables_scriptfile = "%s6_create_rainfall_event_data_tables.sql" % scriptfile_target_dir
+
+create_mysql_root_cred_file = "%smysql.txt" % scriptfile_target_dir
 
 #####################
 
@@ -107,7 +109,6 @@ create_rainfall_event_data_tables = []
 #############################
 
 def write_setup_scripts():
-
     # check if the directory already exists
     if not os.path.exists(scriptfile_target_dir):
         # create the log dir if it doesn't exist
@@ -177,6 +178,15 @@ def check_config():
         raise "NSSK_ADMIN_USER password not defined in user config"
 
 
+def create_root_pw_file():
+    print("Writing NSSK root password file to %s" % create_mysql_root_cred_file)
+    with open(create_mysql_root_cred_file, 'w') as handle:
+        handle.writelines("%s\n" % config[DB_SETUP_USER_PASS])
+
+    # no longer need password in memory
+    config[DB_SETUP_USER_PASS] = None
+
+
 # Create the databases used by the project by running the 'create_databases.sql` script.
 # Requires a user that can create databases.
 def create_databases():
@@ -239,8 +249,7 @@ def configure_users():
                                   config[NETWORK_KEY][CONTAINER_NETWORK],
                                   config[NSSK_USERS_KEY][NSSK_ADMIN_USER]))
 
-    # no longer need passwords
-    config[DB_SETUP_USER_PASS] = None
+    # no longer need passwords in memory
     config[NSSK_USERS_KEY][NSSK_USER] = None
     config[NSSK_USERS_KEY][NSSK_IMPORT_USER] = None
     config[NSSK_USERS_KEY][NSSK_BACKUP_USER] = None
@@ -452,6 +461,10 @@ def main(args):
     print("Creating NSSK databases")
     create_databases()
     print("NSSK databases created")
+
+    print("Creating NSSK root password file")
+    create_root_pw_file()
+    print("NSSK root password file created")
 
     # create users and apply permissions for users
     print("Creating NSSK users")
