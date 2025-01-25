@@ -1,15 +1,13 @@
 #!/bin/bash
 
-docker stop nssk-data;
-docker container rm nssk-data;
+# destructively remove and re-create the nssk-data container
 
-sudo rm -rf ./data/*;
+docker stop nssk-data
+docker container rm nssk-data
 
-docker build -t nssk-mysql .;
+sudo rm -rf ./data/*
 
-./start.sh
+docker build -t nssk-mysql .
 
-echo "Waiting startup to complete and deleting the setup script..."
-sleep 300
+./start.sh db-setup.json
 
-docker exec -it nssk-data rm docker-entrypoint-initdb.d/0_setup.sql
