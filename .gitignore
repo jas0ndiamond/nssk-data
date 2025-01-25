@@ -169,9 +169,10 @@ db.json
 
 # config files
 conf/*.json
+**/db-setup.json
 
 # likely test sql scripts
-docker/setup/*.sql
+docker/database_setup/
 src/*/*.sql
 
 # any test data dumps
@@ -190,4 +191,8 @@ src/distribution/nssk-data-dist.zip
 # updater config file
 src/update-datasets/conf/config.json
 
+# notes
 todo.txt
+
+# utils
+docker/push.sh
