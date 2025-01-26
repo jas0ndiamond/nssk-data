@@ -22,7 +22,7 @@ sys.path.append(str(path_root))
 from src.importer.DBConfigFactory import DBConfigFactory, DBConfig
 
 ########################
-DEFAULT_CONFIG_FILE = "./conf/config.json"
+DEFAULT_CONFIG_FILE = "conf/dist.json"
 
 FETCH_SIZE = 5000
 
