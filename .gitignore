@@ -185,6 +185,7 @@ output
 #cnv-rainfall.json
 
 # dist resources
+src/distribution/conf/dist.json
 src/distribution/tmp/
 src/distribution/nssk-data-dist.zip
 
