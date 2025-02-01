@@ -15,6 +15,16 @@ HOST="$(jq -r '.host' < "$CRED_FILE")"
 PORT="$(jq -r '.port' < "$CRED_FILE")"
 CRED="$(jq -r '.users.nssk_backup' < "$CRED_FILE")"
 
+if [[ -z $HOST ]]; then
+  echo "Could not read host"
+  exit 1
+fi
+
+if [[ -z $PORT ]]; then
+  echo "Could not read port"
+  exit 1
+fi
+
 if [[ -z $CRED ]]; then
   echo "Could not read credentials"
   exit 1
@@ -38,7 +48,7 @@ echo "Dumping database tables to $DUMP_FILE"
 mysqldump\
  -u $USER\
  -P "$PORT"\
- -h $HOST\
+ -h "$HOST"\
  --password="$CRED"\
  --all-databases > "$DUMP_FILE"
 
