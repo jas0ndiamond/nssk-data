@@ -22,7 +22,7 @@ The setup script generates an SQL script to create and configure the following u
 ---
 ### Create config file from template
 
-1. Create file `nssk-data/setup/config.json` from the template `nssk-data/setup/config.json.template`
+1. Create file `nssk-data/setup/db-setup.json` from the template `nssk-data/setup/db-setup.json.template`
 2. Choose secure passwords, especially if database is web-facing. 
 
 ---
@@ -47,17 +47,17 @@ cd nssk-data/setup
 
 `scp nssk-data/setup/conf/config.json user@my.container.host:/path/to/nssk-data/docker`
 
-On the container host, build the docker image and name it `nssk-mysql`
+Switch over to the container host, and build the docker image with the build script:
 
 ```
 cd nssk-data/docker
-docker build -t nssk-mysql .
+./build.sh
 ``` 
 
 Next, run the start script:
 
 ```
-./start.sh
+./start.sh db-setup.json
 ```
 
 Check the output for confirmation that the database user setup script was successfully deleted.
@@ -66,7 +66,7 @@ Check the output for confirmation that the database user setup script was succes
 
 Test access by logging in as user `nssk` with an SQL client.
 
-`mysql -u nssk -P 03306 -h my.container.host -p NSSK_COSMO`
+`mysql -u nssk -P X3306 -h my.container.host -p NSSK_COSMO`
 
 Database contents are persisted in the `data` directory created by running the container.
 
