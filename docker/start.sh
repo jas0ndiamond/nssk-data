@@ -143,22 +143,62 @@ docker run\
  -v "$(pwd)"/conf.d:/etc/mysql/conf.d\
  -v "$(pwd)"/mysql:/var/log/mysql\
  -d\
- "$IMAGE_NAME" &&
+ "$IMAGE_NAME"
 
 # TODO: may not always have logging enabled. add a switch for this or detect it from files in 'nssk-data/mysql'
-# TODO: wait on container healthcheck
-# start fail2ban in container. requires mysql logs to be in place so wait for the database to fully start up.
-echo "Waiting to start fail2ban" &&
-sleep 40 &&
 
+# wait on container healthcheck - can take a few minutes to start up
+MAX_CHECKS=10
+CHECK_COUNT=0
+
+CONTAINER_HEALTHY=0
+# Wait until the container becomes healthy or reach the maximum number of checks
+until [ "$CHECK_COUNT" -ge "$MAX_CHECKS" ]; do
+    # Retrieve the container's health status
+    HEALTH_STATUS=$(docker inspect --format '{{.State.Health.Status}}' "$CONTAINER_NAME")
+
+    # Check if the container is healthy
+    if [ "$HEALTH_STATUS" == "healthy" ]; then
+        echo "Container $CONTAINER_NAME is healthy!"
+        CONTAINER_HEALTHY=1
+        break
+    elif [ "$HEALTH_STATUS" == "starting" ]; then
+        echo "Container $CONTAINER_NAME is still starting..."
+    else
+        echo "Container $CONTAINER_NAME is not healthy. Status: $HEALTH_STATUS"
+        break
+    fi
+
+    # Increment the check count
+    ((CHECK_COUNT++))
+
+    # Wait for 10 seconds before checking again
+    sleep 10
+done
+
+if [ $CONTAINER_HEALTHY == 1 ]; then
+  echo "Container $CONTAINER_NAME reporting healthy. Continuing..."
+else
+  echo "Container $CONTAINER_NAME not reporting healthy. Exiting."
+  exit 1
+fi
+
+# start fail2ban in container. requires mysql logging being enabled, and logs to be in place so wait for the database to fully start up.
+# should be viable once the container is started and reporting healthy
+# TODO selective startup of fail2ban based on whether or not we're starting mysql with logging
 echo "Starting fail2ban" &&
 docker exec -it "$CONTAINER_NAME" /etc/init.d/fail2ban start &&
 sleep 10 &&
 docker exec -it "$CONTAINER_NAME" /etc/init.d/fail2ban status &&
 echo "Removing setup script from container filesystem" &&
 docker exec -it "$CONTAINER_NAME" rm -v /docker-entrypoint-initdb.d/1_create_users.sql &&
-echo "Removing cred file from container filesystem" &&
-docker exec -it "$CONTAINER_NAME" rm -v "$MYSQL_ROOT_PW_FILE"
+
+# the container needs this file on startup
+echo "Setting owner and permissions on cred file" &&
+docker exec -it "$CONTAINER_NAME" chown root:root "$MYSQL_ROOT_PW_FILE" &&
+docker exec -it "$CONTAINER_NAME" chmod 600 "$MYSQL_ROOT_PW_FILE"
+#&& echo "Removing cred file from container filesystem" &&
+#docker exec -it "$CONTAINER_NAME" rm -v "$MYSQL_ROOT_PW_FILE"
 
 # Confirm that 1_create_users.sql was deleted from /docker-entrypoint-initdb.d/
 if docker exec -it "$CONTAINER_NAME" sh -c "test -f /docker-entrypoint-initdb.d/1_create_users.sql"; then
@@ -168,10 +208,10 @@ else
 fi
 
 # Confirm that mysql.txt was deleted from /
-if docker exec -it "$CONTAINER_NAME" sh -c "test -f /$MYSQL_ROOT_PW_FILE"; then
-  echo "WARNING: Failed to delete $MYSQL_ROOT_PW_FILE from container filesystem."
-else
-  echo "Successfully deleted cred file from container filesystem"
-fi
+#if docker exec -it "$CONTAINER_NAME" sh -c "test -f /$MYSQL_ROOT_PW_FILE"; then
+#  echo "WARNING: Failed to delete $MYSQL_ROOT_PW_FILE from container filesystem."
+#else
+#  echo "Successfully deleted cred file from container filesystem"
+#fi
 
 echo "Container startup completed. Move the config file and setup script to a secure location."
