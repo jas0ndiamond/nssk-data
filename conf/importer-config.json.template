@@ -2,6 +2,5 @@
     "host": "myhost",
     "port": 3306,
     "user": "myuser",
-    "pass": "mypass",
-    "dbname": "my_db_name"
+    "pass": "mypass"
 }
