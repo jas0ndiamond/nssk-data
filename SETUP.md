@@ -39,8 +39,8 @@ Create databases to manage imported data from NSSK sources.
 ## Run imports
 Imports:
 * [CoSMo](src/cosmo/README.md)
-* [DNV Whitewater](src/dnv_whitewater/README.md)
-* [CNV Rainfall](src/cnv_rainfall/README.md)
+* [DNV Whitewater](src/dnv_flowworks/README.md)
+* [CNV Flowworks](src/cnv_flowworks/README.md)
 
 ---
 ## Unit Tests
@@ -52,6 +52,6 @@ cd ./test/
 ../venv/bin/python3 -m unittest
 
 # Run test suite by name
-../venv/bin/python3 -m unittest test_cnv_rainfall_dataentry.py
+../venv/bin/python3 -m unittest test_cnv_flowworks_dataentry.py
 ../venv/bin/python3 -m unittest test_cosmo_dataentry.py
 ```
