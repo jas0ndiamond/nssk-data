@@ -20,7 +20,7 @@ from RainfallEventDataEntry import RainfallEventDataEntry
 
 # compile rainfall event data for the cnv region
 
-# designed to run once after both cosmo-import and cnv-rainfall-import have run.
+# designed to run once after both cosmo-import and cnv-flowworks-import have run.
 
 # query the data in segments. don't want to hold a massive result in memory.
 
@@ -54,10 +54,10 @@ SCHEMA = [
 
 TARGET_TABLE = "RAINFALL_EVENTS"
 
-SOURCE_DB_CNV_RAINFALL = "NSSK_CNV_RAINFALL"
+SOURCE_DB_CNV_FLOWWORKS = "NSSK_CNV_FLOWWORKS"
 
 # only one site in dataset
-SOURCE_DB_CNV_RAINFALL_SITE = "CNV"
+SOURCE_DB_CNV_FLOWWORKS_SITE = "CNVRain"
 
 # TODO: maybe hardcode these
 TARGET_DATABASE = None
@@ -109,14 +109,14 @@ def precheck(conf_file):
 
                     # cnv rainfall source database
                     cursor.reset()
-                    cursor.execute("SHOW DATABASES LIKE '%s';" % SOURCE_DB_CNV_RAINFALL)
+                    cursor.execute("SHOW DATABASES LIKE '%s';" % SOURCE_DB_CNV_FLOWWORKS)
                     cursor.fetchall()
 
                     if cursor.rowcount != 1:
                         # TODO: custom exception
-                        raise Exception("Could not find source database %s" % SOURCE_DB_CNV_RAINFALL)
+                        raise Exception("Could not find source database %s" % SOURCE_DB_CNV_FLOWWORKS)
                     else:
-                        logger.debug("Found source database %s" % SOURCE_DB_CNV_RAINFALL)
+                        logger.debug("Found source database %s" % SOURCE_DB_CNV_FLOWWORKS)
 
                     # check that our destination table exists
                     logger.debug("Precheck check rainfall event destination table %s" % TARGET_TABLE)
@@ -152,12 +152,12 @@ def get_measurement_date_window(cursor):
     ###################
     # determine cnv rainfall start datetime (earliest measurement)
 
-    cnv_rainfall_date_search_template = Template(open("sql/get-cnv-rainfall-timestamp.sql.template").read())
-    cnv_rainfall_date_search_sql = cnv_rainfall_date_search_template.substitute(DB=SOURCE_DB_CNV_RAINFALL,
-                                                                                SITE=SOURCE_DB_CNV_RAINFALL_SITE,
+    cnv_rainfall_date_search_template = Template(open("sql/get-cnv-flowworks-timestamp.sql.template").read())
+    cnv_rainfall_date_search_sql = cnv_rainfall_date_search_template.substitute(DB=SOURCE_DB_CNV_FLOWWORKS,
+                                                                                SITE=SOURCE_DB_CNV_FLOWWORKS_SITE,
                                                                                 ORDER="ASC")
 
-    logger.debug("cnv rainfall start date search sql:\n%s" % cnv_rainfall_date_search_sql)
+    logger.debug("cnv flowworks start date search sql:\n%s" % cnv_rainfall_date_search_sql)
 
     cursor.execute(cnv_rainfall_date_search_sql)
     row = cursor.fetchall()
@@ -167,25 +167,25 @@ def get_measurement_date_window(cursor):
         # pprint(row[0])
 
         # row[0] is a tuple containing a datetime, get value with row[0][0]
-        cnv_rainfall_start_time = row[0][0]
+        cnv_flowworks_start_time = row[0][0]
     else:
         # TODO: custom exception
         raise Exception(
             "Could not determine earliest rainfall measurement timestamp for site %s in target database"
-            % SOURCE_DB_CNV_RAINFALL_SITE
+            % SOURCE_DB_CNV_FLOWWORKS_SITE
         )
 
-    log_msg = "Determined earliest rainfall measurement timestamp %s" % cnv_rainfall_start_time
+    log_msg = "Determined earliest rainfall measurement timestamp %s" % cnv_flowworks_start_time
     logger.info(log_msg)
     print(log_msg)
 
     # determine end datetime (most recent rainfall measurement)
 
-    cnv_rainfall_date_search_sql = cnv_rainfall_date_search_template.substitute(DB=SOURCE_DB_CNV_RAINFALL,
-                                                                                SITE=SOURCE_DB_CNV_RAINFALL_SITE,
+    cnv_rainfall_date_search_sql = cnv_rainfall_date_search_template.substitute(DB=SOURCE_DB_CNV_FLOWWORKS,
+                                                                                SITE=SOURCE_DB_CNV_FLOWWORKS_SITE,
                                                                                 ORDER="DESC")
 
-    logger.debug("cnv rainfall end date search sql:\n%s" % cnv_rainfall_date_search_sql)
+    logger.debug("cnv flowworks rainfall end date search sql:\n%s" % cnv_rainfall_date_search_sql)
 
     cursor.execute(cnv_rainfall_date_search_sql)
     row = cursor.fetchall()
@@ -195,15 +195,15 @@ def get_measurement_date_window(cursor):
         # pprint(row[0])
 
         # row[0] is a tuple containing a datetime, get value with row[0][0]
-        cnv_rainfall_end_time = row[0][0]
+        cnv_flowworks_end_time = row[0][0]
     else:
         # TODO: custom exception
         raise Exception(
             "Could not determine latest rainfall measurement timestamp for site %s in target database"
-            % SOURCE_DB_CNV_RAINFALL_SITE
+            % SOURCE_DB_CNV_FLOWWORKS_SITE
         )
 
-    log_msg = "Determined latest rainfall measurement timestamp %s" % cnv_rainfall_end_time
+    log_msg = "Determined latest rainfall measurement timestamp %s" % cnv_flowworks_end_time
     logger.info(log_msg)
     print(log_msg)
 
@@ -211,7 +211,7 @@ def get_measurement_date_window(cursor):
     # done with the supplied cursor
     cursor.reset()
 
-    return cnv_rainfall_start_time, cnv_rainfall_end_time
+    return cnv_flowworks_start_time, cnv_flowworks_end_time
 
 
 # determine the end of a rainfall event, given the start date
@@ -385,20 +385,20 @@ def compile_rainfall_events(db_config_filename, db_importer):
             try:
                 with connection.cursor() as cursor:
 
-                    (cnv_rainfall_start_datetime, cnv_rainfall_end_datetime) = get_measurement_date_window(cursor)
+                    (cnv_flowworks_start_datetime, cnv_flowworks_end_datetime) = get_measurement_date_window(cursor)
 
                     print(("==========\n" +
-                           "cnv_rainfall_start_datetime: %s\n" +
-                           "cnv_rainfall_end_datetime: %s"
+                           "cnv_flowworks_start_datetime: %s\n" +
+                           "cnv_flowworks_end_datetime: %s"
                            ) %
                           (
-                              cnv_rainfall_start_datetime,
-                              cnv_rainfall_end_datetime)
+                              cnv_flowworks_start_datetime,
+                              cnv_flowworks_end_datetime)
                           )
 
                     rainfall_event_count = 0
 
-                    rainfall_date_i = cnv_rainfall_start_datetime
+                    rainfall_date_i = cnv_flowworks_start_datetime
 
                     rainfall_event_processing_start_time = timeit.default_timer()
 
@@ -410,7 +410,7 @@ def compile_rainfall_events(db_config_filename, db_importer):
                     previous_measurement_datetime_year = None
 
                     # until there's no more measurements to search
-                    while rainfall_date_i <= cnv_rainfall_end_datetime:
+                    while rainfall_date_i <= cnv_flowworks_end_datetime:
                         #############
                         # find the start of the next rainfall event
                         next_rainfall_measurement_query_sql = next_rainfall_measurement_query_template.substitute(
@@ -441,7 +441,7 @@ def compile_rainfall_events(db_config_filename, db_importer):
 
                         rainfall_event_end_datetime = determine_rainfall_event_end(cursor,
                                                                                    rainfall_event_start_datetime,
-                                                                                   cnv_rainfall_end_datetime)
+                                                                                   cnv_flowworks_end_datetime)
 
                         # bail out early if there's no next dry period. assign end datetime to the last date
                         if rainfall_event_end_datetime is None:

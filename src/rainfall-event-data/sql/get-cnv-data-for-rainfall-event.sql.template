@@ -2,12 +2,12 @@
 -- Use less-than-or-equal and greater-than-or-equal as start and end datetimes are rainfall measurements
 
 select
-NSSK_CNV_RAINFALL.$SITE.MeasurementTimestamp,
-NSSK_CNV_RAINFALL.$SITE.Rainfall,
-NSSK_CNV_RAINFALL.$SITE.AirTemperature
-from NSSK_CNV_RAINFALL.$SITE
+NSSK_CNV_FLOWWORKS.$SITE.MeasurementTimestamp,
+NSSK_CNV_FLOWWORKS.$SITE.Rainfall,
+NSSK_CNV_FLOWWORKS.$SITE.AirTemperature
+from NSSK_CNV_FLOWWORKS.$SITE
 WHERE
-NSSK_CNV_RAINFALL.$SITE.MeasurementTimestamp >= "$CNV_RAINFALL_START_DATETIME" AND
-NSSK_CNV_RAINFALL.$SITE.MeasurementTimestamp <= "$CNV_RAINFALL_END_DATETIME"
-ORDER BY NSSK_CNV_RAINFALL.$SITE.MeasurementTimestamp
+NSSK_CNV_FLOWWORKS.$SITE.MeasurementTimestamp >= "$CNV_FLOWWORKS_START_DATETIME" AND
+NSSK_CNV_FLOWWORKS.$SITE.MeasurementTimestamp <= "$CNV_FLOWWORKS_END_DATETIME"
+ORDER BY NSSK_CNV_FLOWWORKS.$SITE.MeasurementTimestamp
 ASC

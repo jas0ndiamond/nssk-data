@@ -4,13 +4,13 @@ import logging
 import timeit
 
 from datetime import datetime
-from CNVRainfallDataEntry import CNVRainfallDataEntry
+from CNVFlowworksDataEntry import CNVFlowworksDataEntry
 from src.importer.DBImporter import DBImporter
 
 ################
 # logging
 
-logFile = "cnv-rainfall.log"
+logFile = "cnv-flowworks.log"
 
 # init logging outside of constructor so constructed objects can access
 logging.basicConfig(filename=logFile, format='%(asctime)s [%(levelname)s] -- [%(name)s]-[%(funcName)s]: %(message)s')
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # custom log levels
-logging.getLogger("CNVRainfallDataEntry").setLevel(logging.INFO)
+logging.getLogger("CNVFlowworksDataEntry").setLevel(logging.INFO)
 logging.getLogger("DBImporter").setLevel(logging.INFO)
 
 # schema in the data dump file
@@ -29,7 +29,7 @@ logging.getLogger("DBImporter").setLevel(logging.INFO)
 # Hourly Rainfall (mm)
 # Rainfall (mm)
 # --- order matters
-cnv_rainfall_dump_schema = [
+cnv_flowworks_dump_schema = [
     "yyyy/MM/dd HH:mm:ss",
     "Air Temperature - 5 min Intervals (°C)",
     "Barometer 5 min Intervals (mbar)",
@@ -40,7 +40,7 @@ cnv_rainfall_dump_schema = [
 # schema expected by the database
 # csv schema has odd characters that mysql probably won't like
 # --- order matters
-cnv_rainfall_db_schema = [
+cnv_flowworks_db_schema = [
     "MeasurementTimestamp",
     "AirTemperature",
     "BarometricPressure",
@@ -123,7 +123,7 @@ def main(parsed_args):
 
     # read the dump file
 
-    log_msg = "Beginning import of CNV Rainfall data from data dump file %s" % data_dump_filename
+    log_msg = "Beginning import of CNV Flowworks data from data dump file %s" % data_dump_filename
     logger.info(log_msg)
     print(log_msg)
 
@@ -135,8 +135,8 @@ def main(parsed_args):
     invalid_row_count = 0
 
     db_importer = DBImporter(db_config_filename)
-    db_importer.set_importer_name("cnv-rainfall")
-    db_importer.set_schema(cnv_rainfall_dump_schema)
+    db_importer.set_importer_name("cnv-flowworks")
+    db_importer.set_schema(cnv_flowworks_dump_schema)
     db_importer.set_schema_mapping(schema_field_mapping)
 
     csvread_start_time = timeit.default_timer()
@@ -171,14 +171,14 @@ def main(parsed_args):
                     # if random.randint(0, 1000) == 20:
                     #     raise DataValidationException("Random validation failure")
 
-                    db_importer.add(CNVRainfallDataEntry(row))
+                    db_importer.add(CNVFlowworksDataEntry(row))
                     rows_processed += 1
                 except Exception as e:
 
                     # push object into collection
                     # log collection at end to file
 
-                    logger.error("Error constructing CNVRainfallDataEntry")
+                    logger.error("Error constructing CNVFlowworksDataEntry")
                     logger.error(e)
 
                     invalid_rows.append(row)
@@ -202,7 +202,7 @@ def main(parsed_args):
     # log read/parse failures here. not needed for database write
     if invalid_row_count > 0:
         date_time = datetime.now()
-        invalid_row_file = "./cnv-rainfall_invalid_rows_%s.log" % (date_time.strftime("%Y%m%d-%H%M%S"))
+        invalid_row_file = "./cnv-flowworks_invalid_rows_%s.log" % (date_time.strftime("%Y%m%d-%H%M%S"))
 
         log_msg = "Found %d invalid rows. Logging to file '%s'" % (invalid_row_count, invalid_row_file)
 
@@ -243,19 +243,19 @@ if __name__ == "__main__":
     # shell args
     #
     # --dry-run                                              read data dump file and output sql statements.
-    # -cfg cnv-rainfall.json                                 database config     not required
+    # -cfg cnv-flowworks.json                                 database config     not required
     # NorthVancouverCityHall_export_20240328073312.csv       data dump file      required
     ############################
 
     # reads sys.argv
     parser = argparse.ArgumentParser(
-                        description='Import data from a CNV Rainfall data dump into a configured database.')
+                        description='Import data from a CNV Flowworks data dump into a configured database.')
     parser.add_argument('--dry-run', action='store_const', const=1, dest='dryrun',
                         help='Output database insert statements. Does not write to database.')
     parser.add_argument('-cfg', nargs=1, dest='db_cfg_file',
-                        help='Database config file in json format. Ex: cnv-rainfall.json')
+                        help='Database config file in json format. Ex: cnv-flowworks.json')
     parser.add_argument(nargs=1, dest='data_dump_file',
-                        help='CNV Rainfall data dump file. Ex: NorthVancouverCityHall_export_20240328073312.csv')
+                        help='CNV Flowworks data dump file. Ex: NorthVancouverCityHall_export_20240328073312.csv')
 
     # call main with parsed args
     main(parser.parse_args())

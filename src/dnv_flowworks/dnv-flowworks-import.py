@@ -4,13 +4,13 @@ import logging
 import timeit
 
 from datetime import datetime
-from DNVWhitewaterDataEntry import DNVWhitewaterDataEntry
+from DNVFlowworksDataEntry import DNVFlowworksDataEntry
 from src.importer.DBImporter import DBImporter
 
 ################
 # logging
 
-logFile = "dnv-whitewater.log"
+logFile = "dnv-flowworks.log"
 
 # init logging outside of constructor so constructed objects can access
 logging.basicConfig(filename=logFile, format='%(asctime)s [%(levelname)s] -- [%(name)s]-[%(funcName)s]: %(message)s')
@@ -19,14 +19,14 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # custom log levels
-logging.getLogger("DNVWhitewaterDataEntry").setLevel(logging.INFO)
+logging.getLogger("DNVFlowworksDataEntry").setLevel(logging.INFO)
 logging.getLogger("DBImporter").setLevel(logging.INFO)
 
 ###############
 
 # data dump file
 # "datapoints":[{"date":"2021-03-29T14:00:00","value":11.46656},...]
-dnv_whitewater_dump_schema = [
+dnv_flowworks_dump_schema = [
     "date",
     "value"
 ]
@@ -34,7 +34,7 @@ dnv_whitewater_dump_schema = [
 # schema expected by the database
 # csv schema has odd characters that mysql probably won't like
 # --- order matters
-dnv_whitewater_db_schema = [
+dnv_flowworks_db_schema = [
     "MeasurementTimestamp",
     "FlowReading"
 ]
@@ -109,7 +109,7 @@ def main(parsed_args):
 
     # read the dump file
 
-    log_msg = "Beginning import of DNV Whitewater data from data dump file %s" % data_dump_filename
+    log_msg = "Beginning import of DNV Flowworks data from data dump file %s" % data_dump_filename
     logger.info(log_msg)
     print(log_msg)
 
@@ -121,8 +121,8 @@ def main(parsed_args):
     invalid_entry_count = 0
 
     db_importer = DBImporter(db_config_filename)
-    db_importer.set_importer_name("dnv_whitewater")
-    db_importer.set_schema(dnv_whitewater_dump_schema)
+    db_importer.set_importer_name("dnv_flowworks")
+    db_importer.set_schema(dnv_flowworks_dump_schema)
     db_importer.set_schema_mapping(schema_field_mapping)
 
     print("Extracting data from JSON file...")
@@ -141,14 +141,14 @@ def main(parsed_args):
                     # if random.randint(0, 1000) == 20:
                     #     raise DataValidationException("Random validation failure")
 
-                    db_importer.add(DNVWhitewaterDataEntry(entry))
+                    db_importer.add(DNVFlowworksDataEntry(entry))
                     entries_processed += 1
                 except Exception as e:
 
                     # push object into collection
                     # log collection at end to file
 
-                    logger.error("Error constructing DNVWhitewaterDataEntry")
+                    logger.error("Error constructing DNVFlowworksDataEntry")
                     logger.error(e)
 
                     invalid_entry.append(entry)
@@ -172,7 +172,7 @@ def main(parsed_args):
     # log read/parse failures here. not needed for database write
     if invalid_entry_count > 0:
         date_time = datetime.now()
-        invalid_entry_file = "./dnv_whitewater_invalid_entries_%s.log" % (date_time.strftime("%Y%m%d-%H%M%S"))
+        invalid_entry_file = "./dnv_flowworks_invalid_entries_%s.log" % (date_time.strftime("%Y%m%d-%H%M%S"))
 
         log_msg = "Found %d invalid entries. Logging to file '%s'" % (invalid_entry_count, invalid_entry_file)
 
@@ -213,19 +213,19 @@ if __name__ == "__main__":
     # shell args
     #
     # --dry-run                                           read data dump file and output sql statements.
-    # -cfg dnv_whitewater.json                                 database config     not required
-    # dnv_whitewater.json                                      data dump file      required
+    # -cfg dnv_flowworks.json                                 database config     not required
+    # dnv_flowworks.json                                      data dump file      required
     ############################
 
     # reads sys.argv
     parser = argparse.ArgumentParser(
-        description='Import data from a DNV Whitewater data dump into a configured database.')
+        description='Import data from a DNV Flowworks data dump into a configured database.')
     parser.add_argument('--dry-run', action='store_const', const=1, dest='dryrun',
                         help='Output database insert statements. Does not write to database.')
     parser.add_argument('-cfg', nargs=1, dest='db_cfg_file',
-                        help='Database config file in json format. Ex: dnv_whitewater.json')
+                        help='Database config file in json format. Ex: dnv_flowworks.json')
     parser.add_argument(nargs=1, dest='data_dump_file',
-                        help='DNV Whitewater data dump file. Ex: 20240329-145659_dnv_whitewater.json')
+                        help='DNV Flowworks data dump file. Ex: 20240329-145659_dnv_flowworks.json')
 
     # call main with parsed args
     main(parser.parse_args())

@@ -10,8 +10,8 @@ class Config:
     DATASOURCES_KEY = "data_sources"
 
     COSMO_KEY = "cosmo"
-    CNV_RAINFALL_KEY = "cnv_rainfall"
-    DNV_WHITEWATER_KEY = "dnv_whitewater"
+    CNV_FLOWWORKS_KEY = "cnv_flowworks"
+    DNV_FLOWWORKS_KEY = "dnv_flowworks"
     WATERRANGERS_KEY = "waterrangers"
 
     DATA_IMPORT_KEY = "data_import"
@@ -68,30 +68,30 @@ class Config:
             raise ConfigException("CoSMo destination directory does not exist")
 
         #######################
-        # dnv whitewater
-        if self.config[Config.DATASOURCES_KEY][Config.DNV_WHITEWATER_KEY] is None:
-            raise ConfigException("Missing DNV Whitewater section in config")
-        if self.config[Config.DATASOURCES_KEY][Config.DNV_WHITEWATER_KEY][Config.DEST_DIR_KEY] is None:
-            raise ConfigException("Missing DNV Whitewater destination directory in config")
-        if self.config[Config.DATASOURCES_KEY][Config.DNV_WHITEWATER_KEY][Config.API_KEY_KEY] is None:
-            raise ConfigException("Missing DNV Whitewater api key in config")
+        # dnv flowworks
+        if self.config[Config.DATASOURCES_KEY][Config.DNV_FLOWWORKS_KEY] is None:
+            raise ConfigException("Missing DNV Flowworks section in config")
+        if self.config[Config.DATASOURCES_KEY][Config.DNV_FLOWWORKS_KEY][Config.DEST_DIR_KEY] is None:
+            raise ConfigException("Missing DNV Flowworks destination directory in config")
+        if self.config[Config.DATASOURCES_KEY][Config.DNV_FLOWWORKS_KEY][Config.API_KEY_KEY] is None:
+            raise ConfigException("Missing DNV Flowworks api key in config")
 
-        if not os.path.exists(self.config[Config.DATASOURCES_KEY][Config.DNV_WHITEWATER_KEY][Config.DEST_DIR_KEY]):
-            raise ConfigException("DNV Whitewater destination directory does not exist")
+        if not os.path.exists(self.config[Config.DATASOURCES_KEY][Config.DNV_FLOWWORKS_KEY][Config.DEST_DIR_KEY]):
+            raise ConfigException("DNV Flowworks destination directory does not exist")
 
         #######################
         # cnv rainfall
-        if self.config[Config.DATASOURCES_KEY][Config.CNV_RAINFALL_KEY] is None:
-            raise ConfigException("Missing CNV Rainfall section in config")
-        if self.config[Config.DATASOURCES_KEY][Config.CNV_RAINFALL_KEY][Config.DEST_DIR_KEY] is None:
-            raise ConfigException("Missing CNV Rainfall destination directory in config")
-        if self.config[Config.DATASOURCES_KEY][Config.CNV_RAINFALL_KEY][Config.USER_KEY] is None:
-            raise ConfigException("Missing CNV Rainfall user in config")
-        if self.config[Config.DATASOURCES_KEY][Config.CNV_RAINFALL_KEY][Config.PASS_KEY] is None:
-            raise ConfigException("Missing CNV Rainfall pass in config")
+        if self.config[Config.DATASOURCES_KEY][Config.CNV_FLOWWORKS_KEY] is None:
+            raise ConfigException("Missing CNV Flowworks section in config")
+        if self.config[Config.DATASOURCES_KEY][Config.CNV_FLOWWORKS_KEY][Config.DEST_DIR_KEY] is None:
+            raise ConfigException("Missing CNV Flowworks destination directory in config")
+        if self.config[Config.DATASOURCES_KEY][Config.CNV_FLOWWORKS_KEY][Config.USER_KEY] is None:
+            raise ConfigException("Missing CNV Flowworks user in config")
+        if self.config[Config.DATASOURCES_KEY][Config.CNV_FLOWWORKS_KEY][Config.PASS_KEY] is None:
+            raise ConfigException("Missing CNV Flowworks pass in config")
 
-        if not os.path.exists(self.config[Config.DATASOURCES_KEY][Config.CNV_RAINFALL_KEY][Config.DEST_DIR_KEY]):
-            raise ConfigException("CNV Rainfall destination directory does not exist")
+        if not os.path.exists(self.config[Config.DATASOURCES_KEY][Config.CNV_FLOWWORKS_KEY][Config.DEST_DIR_KEY]):
+            raise ConfigException("CNV Flowworks destination directory does not exist")
 
         #######################
         # water rangers
@@ -111,20 +111,30 @@ class Config:
         return self.config[Config.DATA_IMPORT_KEY][Config.GLOBAL_OPTS_KEY]
 
     ###########################
-    # retrieval configs
+    # destination dirs
     def get_cosmo_retrieval_dest_dir(self):
         return self.config[Config.DATASOURCES_KEY][Config.COSMO_KEY][Config.DEST_DIR_KEY]
+
+    def get_cnv_flowworks_dest_dir(self):
+        return self.config[Config.DATASOURCES_KEY][Config.CNV_FLOWWORKS_KEY][Config.DEST_DIR_KEY]
+
+    ###########################
+    # retrieval configs
+
+    def get_cnv_flowworks_retrieval_config(self):
+        return self.config[Config.DATASOURCES_KEY][Config.CNV_FLOWWORKS_KEY]
+
 
     ###########################
     # update configs
     def get_cosmo_update_config(self):
         return self.config[Config.DATA_IMPORT_KEY][Config.DATA_IMPORT_IMPORTERS_KEY][Config.COSMO_KEY]
 
-    def get_cnv_rainfall_update_config(self):
-        return self.config[Config.DATASOURCES_KEY][Config.DATA_IMPORT_IMPORTERS_KEY][Config.CNV_RAINFALL_KEY]
+    def get_cnv_flowworks_update_config(self):
+        return self.config[Config.DATASOURCES_KEY][Config.DATA_IMPORT_IMPORTERS_KEY][Config.CNV_FLOWWORKS_KEY]
 
     def get_dnv_whitewater_update_config(self):
-        return self.config[Config.DATASOURCES_KEY][Config.DATA_IMPORT_IMPORTERS_KEY][Config.DNV_WHITEWATER_KEY]
+        return self.config[Config.DATASOURCES_KEY][Config.DATA_IMPORT_IMPORTERS_KEY][Config.DNV_FLOWWORKS_KEY]
 
     def get_waterrangers_update_config(self):
         return self.config[Config.DATASOURCES_KEY][Config.DATA_IMPORT_IMPORTERS_KEY][Config.WATERRANGERS_KEY]

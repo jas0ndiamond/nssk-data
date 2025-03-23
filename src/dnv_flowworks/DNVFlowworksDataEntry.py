@@ -13,7 +13,7 @@ from src.data.DataEntry import DataEntry
 # "value"
 
 
-class DNVWhitewaterDataEntry(DataEntry):
+class DNVFlowworksDataEntry(DataEntry):
 
     # row_obj is any structure that can be indexed and is iterable
     # csv, json, raw array

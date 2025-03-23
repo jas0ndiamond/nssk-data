@@ -16,20 +16,20 @@ from src.exception.DataValidationException import DataValidationException
 # Rainfall (mm)
 
 
-class CNVRainfallDataEntry(DataEntry):
+class CNVFlowworksDataEntry(DataEntry):
 
     # row_obj is any structure that can be indexed and is iterable
     # csv, json, raw array
     def __init__(self, entry_obj):
 
-        # raise exception if theres a problem
+        # raise exception if there's a problem
         super().__init__(entry_obj)
 
         # at this point we have a valid entry, but still want to clean it up
         # TODO: remove alphanumeric+ chars used in sql syntax [ ] { } | " ' ;
 
         # only one site: set in generate_db_setup.py
-        self.site = "CNV"
+        self.site = "CNVRain"
 
         ##################
         # value buckets - these can be empty in the dump
