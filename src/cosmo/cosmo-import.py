@@ -8,6 +8,7 @@ import logging
 from datetime import datetime
 from CosmoDataEntry import CosmoDataEntry
 from src.importer.DBImporter import DBImporter
+from src.logger.LoggerFactory import LoggerFactory
 
 # for testing validation failures
 # import random
@@ -162,9 +163,11 @@ def want_row(in_row):
 def main(parsed_args):
 
     # handle parsed arguments
-    print(parsed_args)
+    #print(parsed_args)
 
     dry_run = False
+    dry_run_param = getattr(parsed_args, "dry_run")
+
     data_dump_filename = None
     db_config_filename = None
 
@@ -172,9 +175,9 @@ def main(parsed_args):
         data_dump_filename = getattr(parsed_args, "data_dump_file")[0]
 
     if getattr(parsed_args, "db_cfg_file") is not None:
-        db_config_filename = getattr(parsed_args, "db_cfg_file")[0]
+        db_config_filename = getattr(parsed_args, "db_cfg_file")
 
-    if getattr(parsed_args, "dry_run") is not None:
+    if dry_run_param is not None and dry_run_param is True:
         # dry run - don't need a db config file since there's no db interaction
         log_msg = "Executing dry run"
         logger.info(log_msg)
@@ -248,6 +251,10 @@ def main(parsed_args):
 
                 print("\r\tRows processed: %d. Validation failures: %d" %
                       (rows_processed, invalid_row_count), end='', flush=True)
+
+                # use a subset when testing
+                # if rows_processed > 1000:
+                #     break
             else:
                 # use sparingly
                 if logger.isEnabledFor(logging.DEBUG):
