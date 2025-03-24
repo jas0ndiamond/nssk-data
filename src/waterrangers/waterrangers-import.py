@@ -6,7 +6,7 @@ import logging
 # TODO need path_root modifier like in other importers?
 
 from datetime import datetime
-from CosmoDataEntry import CosmoDataEntry
+from WaterrangersDataEntry import WaterrangersDataEntry
 from src.importer.DBImporter import DBImporter
 from src.logger.LoggerFactory import LoggerFactory
 
@@ -17,7 +17,7 @@ from src.logger.LoggerFactory import LoggerFactory
 ################
 # logging
 
-logFile = "cosmo.log"
+logFile = "waterrangers.log"
 
 # init logging outside of constructor so constructed objects can access
 logging.basicConfig(filename=logFile, format='%(asctime)s [%(levelname)s] -- [%(name)s]-[%(funcName)s]: %(message)s')
@@ -26,115 +26,92 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # custom log levels
-logging.getLogger("CosmoDataEntry").setLevel(logging.INFO)
+logging.getLogger("WaterrangersDataEntry").setLevel(logging.INFO)
 logging.getLogger("DBImporter").setLevel(logging.INFO)
 
 ###############
 
-# Wagg Creek
-# WAGG01
-# WAGG02
-# WAGG03
-
-# Mosquito Creek
-# MOSQ01
-# MOSQ02
-# MOSQ03
-# MOSQ04
-# MOSQ05
-
-# Mission Creek
-# MISS01
-
-# Mackay Creek
-# MACK02
-# MACK03
-# MACK04
-# MACK05
-
-# Hastings Creek
-# HAST01
-# HAST02
-# HAST03
-
 # Move to config file
-dataset_name_field = "DatasetName"
-cosmo_dataset_name = 'DFO PSEC Community Stream Monitoring (CoSMo)'
-monitoring_location_id_field = "MonitoringLocationID"
 sensors = {
-    "WAGG01",
-    "WAGG02",
-    "WAGG03",
-    "MOSQ01",
-    "MOSQ02",
-    "MOSQ03",
-    "MOSQ04",
-    "MOSQ05",
-    "MOSQ06",
-    "MOSQ07",
-    "MISS01",
-    "MACK02",
-    "MACK03",
-    "MACK04",
-    "MACK05",
-    "HAST01",
-    "HAST02",
-    "HAST03"
+    "WAG-E-01": "WAG_E_01",
+    "WAG-E-02": "WAG_E_02",
+    "WAG-E-03": "WAG_E_03",
+    "WAG-E-05": "WAG_E_05",
+    "WAG-E-06a": "WAG_E_06a",
+    "WAG-E-06b": "WAG_E_06b",
+    "WAG-E-07": "WAG_E_07",
+    "WAG-M-01": "WAG_M_01",
+    "WAG-M-02": "WAG_M_02",
+    "WAG-M-03": "WAG_M_03",
+    "MIS-M-01": "MIS_M_01",
+    "MIS-E-01": "MIS_E_01",
+    "MIS-W-01": "MIS_W_01",
+    "WAG-W-02a": "WAG_W_02a",
+    "WAG-W-02b": "WAG_W_02b",
+    "WAG-W-03": "WAG_W_03",
+    "MOS-M-01": "MOS_M_01"
 }
 
-cosmo_schema = [
-    "DatasetName",
-    "MonitoringLocationID",
-    "MonitoringLocationName",
-    "MonitoringLocationLatitude",
-    "MonitoringLocationLongitude",
-    "MonitoringLocationHorizontalCoordinateReferenceSystem",
-    "MonitoringLocationHorizontalAccuracyMeasure",
-    "MonitoringLocationHorizontalAccuracyUnit",
-    "MonitoringLocationVerticalMeasure",
-    "MonitoringLocationVerticalUnit",
-    "MonitoringLocationType",
-    "ActivityType",
-    "ActivityMediaName",
-    "ActivityStartDate",
-    "ActivityStartTime",
-    "ActivityStartTimeZone",
-    "ActivityEndDate",
-    "ActivityEndTime",
-    "ActivityEndTimeZone",
-    "ActivityDepthHeightMeasure",
-    "ActivityDepthHeightUnit",
-    "SampleCollectionEquipmentName",
-    "CharacteristicName",
-    "MethodSpeciation",
-    "ResultSampleFraction",
-    "ResultValue",
-    "ResultUnit",
-    "ResultValueType",
-    "ResultDetectionCondition",
-    "ResultDetectionQuantitationLimitMeasure",
-    "ResultDetectionQuantitationLimitUnit",
-    "ResultDetectionQuantitationLimitType",
-    "ResultStatusID",
-    "ResultComment",
-    "ResultAnalyticalMethodID",
-    "ResultAnalyticalMethodContext",
-    "ResultAnalyticalMethodName",
-    "AnalysisStartDate",
-    "AnalysisStartTime",
-    "AnalysisStartTimeZone",
-    "LaboratoryName",
-    "LaboratorySampleID",
-]
+# file csv file mapped to db column
 
+
+# db_schema = [
+#     "ObservedOn",
+#     "ObservedBy",
+#     "SampleId",
+#     "Testers",
+#     "HilsenhoffBioticIndex",
+#     "Microfibers",
+#     "Microbeads",
+#     "Fragments",
+#     "Film",
+#     "Ph",
+#     "Clarity",
+#     "Nitrites",
+#     "Conductivity",
+#     "Alkalinity",
+#     "Turbidity",
+#     "Hardness",
+#     "TotalKjeldahlNitrogen",
+#     "TotalPhosphorus",
+#     "OtherColiform",
+#     "TotalColiform",
+#     "ChlorophyllA",
+#     "TotalPhosphorusBottom",
+#     "TurbidityNtu",
+#     "Calcium",
+#     "BiochemicalOxygenDemand",
+#     "TotalSuspendedSolids",
+#     "IncubationTime",
+#     "IncubationTemperature",
+#     "OxygenPercent",
+#     "Enterococci",
+#     "WaterFlow",
+#     "Chloride",
+#     "RiverFlow",
+#     "RiverStage",
+#     "Fluorometer",
+#     "Oxygen",
+#     "WaterDepth",
+#     "Chlorine",
+#     "Nitrates",
+#     "PhosphatesThreshold",
+#     "TestStrips",
+#     "WaterTemperature",
+#     "AirTemperature",
+#     "Salinity",
+#     "Civ",
+#     "Taxa",
+#     "TotalDissolvedSolids",
+#     "DissolvedOrganicCarbon",
+#     "DissolvedOrganicCarbon2",
+#     "Ammonia",
+#     "Ecoli"
+# ]
 
 def want_row(in_row):
-    # if a row in the data dump is on our shortlist of sensors, we want it
-    return (
-            in_row[monitoring_location_id_field] in sensors and
-            in_row[dataset_name_field] == cosmo_dataset_name
-    )
-
+    # we're taking all measurements from dump files
+    return True
 
 ###############################
 
@@ -177,6 +154,16 @@ def main(parsed_args):
     if getattr(parsed_args, "db_cfg_file") is not None:
         db_config_filename = getattr(parsed_args, "db_cfg_file")
 
+    db_site = None
+    if getattr(parsed_args, "site") is not None:
+        db_site = getattr(parsed_args, "site")[0]
+
+        if db_site not in sensors:
+            print("Could not resolve table from site %s. Exiting..." % db_site)
+            exit(1)
+        else:
+            print("Resolved table %s from site %s" % (sensors[db_site], db_site))
+
     if dry_run_param is not None and dry_run_param is True:
         # dry run - don't need a db config file since there's no db interaction
         log_msg = "Executing dry run"
@@ -197,7 +184,7 @@ def main(parsed_args):
 
     # read the dump file
 
-    log_msg = "Beginning import of CoSMo data from data dump file %s" % data_dump_filename
+    log_msg = "Beginning import of Waterrangers data from data dump file %s to site %s" % (data_dump_filename, db_site)
     logger.info(log_msg)
     print(log_msg)
 
@@ -209,8 +196,9 @@ def main(parsed_args):
     invalid_row_count = 0
 
     db_importer = DBImporter(db_config_filename)
-    db_importer.set_importer_name("cosmo")
-    db_importer.set_schema(cosmo_schema)
+    db_importer.set_importer_name("waterrangers")
+    db_importer.set_schema(WaterrangersDataEntry.schema)
+    db_importer.set_schema_mapping(WaterrangersDataEntry.schema_mapping)
     db_importer.set_commit_size(10000)
 
     csvread_start_time = timeit.default_timer()
@@ -237,14 +225,17 @@ def main(parsed_args):
                     # if random.randint(0, 1000) == 20:
                     #     raise DataValidationException("Random validation failure")
 
-                    db_importer.add(CosmoDataEntry(row))
+                    data_entry = WaterrangersDataEntry(row)
+                    data_entry.set_db_destination(sensors[db_site])
+
+                    db_importer.add(data_entry)
                     rows_processed += 1
                 except Exception as e:
 
                     # push object into collection
                     # log collection at end to file
 
-                    logger.error("Error constructing CosmoDataEntry", e)
+                    logger.error("Error constructing WaterrangersDataEntry", e)
 
                     invalid_rows.append(row)
                     invalid_row_count += 1
@@ -271,7 +262,7 @@ def main(parsed_args):
     # log read/parse failures here. not needed for database write
     if invalid_row_count > 0:
         date_time = datetime.now()
-        invalid_row_file = "./cosmo_invalid_rows_%s.log" % (date_time.strftime("%Y%m%d-%H%M%S"))
+        invalid_row_file = "./waterrangers_invalid_rows_%s.log" % (date_time.strftime("%Y%m%d-%H%M%S"))
 
         log_msg = "Found %d invalid rows. Logging to file '%s'" % (invalid_row_count, invalid_row_file)
 
@@ -314,19 +305,21 @@ if __name__ == "__main__":
     #
     # --dry-run                             read data dump file and output sql statements.
     # -cfg conf.json                        database config     not required
-    # doi.org_10.25976_0gvo-9d12.csv        data dump file      required
+    # WAG-E-01                              waterrangers site   required
+    # WAG-E-01.csv                          data dump file      required
     ############################
 
     # reads sys.argv
-    parser = argparse.ArgumentParser(description='Import data from a CoSMo data dump into a configured database.')
+    parser = argparse.ArgumentParser(description='Import data from a Waterrangers data dump into a configured database.')
     parser.add_argument('-q', '--quiet', action='store_true', dest='quiet',
                         help='Quiet mode. Limits ncurses status output and similar.')
     parser.add_argument('--dry-run', action='store_true', dest='dry_run',
                         help='Output database insert statements. Does not write to database.')
     parser.add_argument('-cfg', '--config-file', type=str, dest='db_cfg_file',
-                        help='Database config file in json format. Ex: cosmo.json')
+                        help='Database config file in json format. Ex: waterrangers.json')
+    parser.add_argument(nargs=1, dest='site', help='Waterrangers site. Ex: WAG-E-01')
     parser.add_argument(nargs=1, dest='data_dump_file', type=str,
-                        help='CoSMo data dump file. Ex: doi.org_10.25976_0gvo-9d12.csv')
+                        help='CoSMo data dump file. Ex: WAG-E-01.csv')
 
     # call main with parsed args
     main(parser.parse_args())

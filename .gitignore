@@ -169,9 +169,10 @@ db.json
 
 # config files
 conf/*.json
+**/db-setup.json
 
 # likely test sql scripts
-docker/setup/*.sql
+docker/database_setup/
 src/*/*.sql
 
 # any test data dumps
@@ -180,12 +181,19 @@ src/*/*.sql
 # test output files
 output
 
-#dnv-whitewater*.json
-#cnv-rainfall.json
+#dnv-flowworks*.json
+#cnv-flowworks.json
 
 # dist resources
+src/distribution/conf/*.json
 src/distribution/tmp/
 src/distribution/nssk-data-dist.zip
 
 # updater config file
-src/update-datasets/conf/config.json
+src/update-datasets/conf/*.json
+
+# notes
+todo.txt
+
+# utils
+docker/push.sh

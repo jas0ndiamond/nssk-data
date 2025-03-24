@@ -1,23 +1,16 @@
 import csv
-import timeit
 import argparse
 import logging
-
-# TODO need path_root modifier like in other importers?
+import timeit
 
 from datetime import datetime
-from CosmoDataEntry import CosmoDataEntry
+from CNVFlowworksDataEntry import CNVFlowworksDataEntry
 from src.importer.DBImporter import DBImporter
-from src.logger.LoggerFactory import LoggerFactory
-
-# for testing validation failures
-# import random
-# from src.exception.DataValidationException import DataValidationException
 
 ################
 # logging
 
-logFile = "cosmo.log"
+logFile = "cnv-flowworks.log"
 
 # init logging outside of constructor so constructed objects can access
 logging.basicConfig(filename=logFile, format='%(asctime)s [%(levelname)s] -- [%(name)s]-[%(funcName)s]: %(message)s')
@@ -26,114 +19,50 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # custom log levels
-logging.getLogger("CosmoDataEntry").setLevel(logging.INFO)
+logging.getLogger("CNVFlowworksDataEntry").setLevel(logging.INFO)
 logging.getLogger("DBImporter").setLevel(logging.INFO)
 
-###############
-
-# Wagg Creek
-# WAGG01
-# WAGG02
-# WAGG03
-
-# Mosquito Creek
-# MOSQ01
-# MOSQ02
-# MOSQ03
-# MOSQ04
-# MOSQ05
-
-# Mission Creek
-# MISS01
-
-# Mackay Creek
-# MACK02
-# MACK03
-# MACK04
-# MACK05
-
-# Hastings Creek
-# HAST01
-# HAST02
-# HAST03
-
-# Move to config file
-dataset_name_field = "DatasetName"
-cosmo_dataset_name = 'DFO PSEC Community Stream Monitoring (CoSMo)'
-monitoring_location_id_field = "MonitoringLocationID"
-sensors = {
-    "WAGG01",
-    "WAGG02",
-    "WAGG03",
-    "MOSQ01",
-    "MOSQ02",
-    "MOSQ03",
-    "MOSQ04",
-    "MOSQ05",
-    "MOSQ06",
-    "MOSQ07",
-    "MISS01",
-    "MACK02",
-    "MACK03",
-    "MACK04",
-    "MACK05",
-    "HAST01",
-    "HAST02",
-    "HAST03"
-}
-
-cosmo_schema = [
-    "DatasetName",
-    "MonitoringLocationID",
-    "MonitoringLocationName",
-    "MonitoringLocationLatitude",
-    "MonitoringLocationLongitude",
-    "MonitoringLocationHorizontalCoordinateReferenceSystem",
-    "MonitoringLocationHorizontalAccuracyMeasure",
-    "MonitoringLocationHorizontalAccuracyUnit",
-    "MonitoringLocationVerticalMeasure",
-    "MonitoringLocationVerticalUnit",
-    "MonitoringLocationType",
-    "ActivityType",
-    "ActivityMediaName",
-    "ActivityStartDate",
-    "ActivityStartTime",
-    "ActivityStartTimeZone",
-    "ActivityEndDate",
-    "ActivityEndTime",
-    "ActivityEndTimeZone",
-    "ActivityDepthHeightMeasure",
-    "ActivityDepthHeightUnit",
-    "SampleCollectionEquipmentName",
-    "CharacteristicName",
-    "MethodSpeciation",
-    "ResultSampleFraction",
-    "ResultValue",
-    "ResultUnit",
-    "ResultValueType",
-    "ResultDetectionCondition",
-    "ResultDetectionQuantitationLimitMeasure",
-    "ResultDetectionQuantitationLimitUnit",
-    "ResultDetectionQuantitationLimitType",
-    "ResultStatusID",
-    "ResultComment",
-    "ResultAnalyticalMethodID",
-    "ResultAnalyticalMethodContext",
-    "ResultAnalyticalMethodName",
-    "AnalysisStartDate",
-    "AnalysisStartTime",
-    "AnalysisStartTimeZone",
-    "LaboratoryName",
-    "LaboratorySampleID",
+# schema in the data dump file
+# yyyy/MM/dd HH:mm:ss
+# Air Temperature - 5 min Intervals (°C)
+# Barometer 5 min Intervals (mbar)
+# Hourly Rainfall (mm)
+# Rainfall (mm)
+# --- order matters
+cnv_flowworks_dump_schema = [
+    "yyyy/MM/dd HH:mm:ss",
+    "Air Temperature - 5 min Intervals (°C)",
+    "Barometer 5 min Intervals (mbar)",
+    "Hourly Rainfall (mm)",
+    "Rainfall (mm)"
 ]
+
+# schema expected by the database
+# csv schema has odd characters that mysql probably won't like
+# --- order matters
+cnv_flowworks_db_schema = [
+    "MeasurementTimestamp",
+    "AirTemperature",
+    "BarometricPressure",
+    "HourlyRainfall",
+    "Rainfall"
+]
+
+# map the schemas
+# where to put this?
+# relevant only to database?
+schema_field_mapping = {
+    "yyyy/MM/dd HH:mm:ss": "MeasurementTimestamp",
+    "Air Temperature - 5 min Intervals (°C)": "AirTemperature",
+    "Barometer 5 min Intervals (mbar)": "BarometricPressure",
+    "Hourly Rainfall (mm)": "HourlyRainfall",
+    "Rainfall (mm)": "Rainfall"
+}
 
 
 def want_row(in_row):
-    # if a row in the data dump is on our shortlist of sensors, we want it
-    return (
-            in_row[monitoring_location_id_field] in sensors and
-            in_row[dataset_name_field] == cosmo_dataset_name
-    )
+    # only one site for now: accept it all
+    return True
 
 
 ###############################
@@ -163,11 +92,8 @@ def want_row(in_row):
 def main(parsed_args):
 
     # handle parsed arguments
-    #print(parsed_args)
 
     dry_run = False
-    dry_run_param = getattr(parsed_args, "dry_run")
-
     data_dump_filename = None
     db_config_filename = None
 
@@ -175,9 +101,9 @@ def main(parsed_args):
         data_dump_filename = getattr(parsed_args, "data_dump_file")[0]
 
     if getattr(parsed_args, "db_cfg_file") is not None:
-        db_config_filename = getattr(parsed_args, "db_cfg_file")
+        db_config_filename = getattr(parsed_args, "db_cfg_file")[0]
 
-    if dry_run_param is not None and dry_run_param is True:
+    if getattr(parsed_args, "dryrun") is not None:
         # dry run - don't need a db config file since there's no db interaction
         log_msg = "Executing dry run"
         logger.info(log_msg)
@@ -197,7 +123,7 @@ def main(parsed_args):
 
     # read the dump file
 
-    log_msg = "Beginning import of CoSMo data from data dump file %s" % data_dump_filename
+    log_msg = "Beginning import of CNV Flowworks data from data dump file %s" % data_dump_filename
     logger.info(log_msg)
     print(log_msg)
 
@@ -209,18 +135,26 @@ def main(parsed_args):
     invalid_row_count = 0
 
     db_importer = DBImporter(db_config_filename)
-    db_importer.set_importer_name("cosmo")
-    db_importer.set_schema(cosmo_schema)
-    db_importer.set_commit_size(10000)
+    db_importer.set_importer_name("cnv-flowworks")
+    db_importer.set_schema(cnv_flowworks_dump_schema)
+    db_importer.set_schema_mapping(schema_field_mapping)
 
     csvread_start_time = timeit.default_timer()
     with open(data_dump_filename, newline='', encoding='utf-8') as csvfile:
+
+        # data dump file has two metadata lines above the schema
+        next(csvfile)
+        next(csvfile)
+
         reader = csv.DictReader(csvfile, delimiter=',', strict=True)
 
         field_names = reader.fieldnames
 
+        logger.info("CSV file schema:")
         # schema
-        logger.info("CSV file schema: %s" % field_names)
+        for field in field_names:
+            logger.info("\t%s" % field)
+
         logger.info("------------")
 
         print("Extracting data from CSV file...")
@@ -237,24 +171,21 @@ def main(parsed_args):
                     # if random.randint(0, 1000) == 20:
                     #     raise DataValidationException("Random validation failure")
 
-                    db_importer.add(CosmoDataEntry(row))
+                    db_importer.add(CNVFlowworksDataEntry(row))
                     rows_processed += 1
                 except Exception as e:
 
                     # push object into collection
                     # log collection at end to file
 
-                    logger.error("Error constructing CosmoDataEntry", e)
+                    logger.error("Error constructing CNVFlowworksDataEntry")
+                    logger.error(e)
 
                     invalid_rows.append(row)
                     invalid_row_count += 1
 
                 print("\r\tRows processed: %d. Validation failures: %d" %
                       (rows_processed, invalid_row_count), end='', flush=True)
-
-                # use a subset when testing
-                # if rows_processed > 1000:
-                #     break
             else:
                 # use sparingly
                 if logger.isEnabledFor(logging.DEBUG):
@@ -271,7 +202,7 @@ def main(parsed_args):
     # log read/parse failures here. not needed for database write
     if invalid_row_count > 0:
         date_time = datetime.now()
-        invalid_row_file = "./cosmo_invalid_rows_%s.log" % (date_time.strftime("%Y%m%d-%H%M%S"))
+        invalid_row_file = "./cnv-flowworks_invalid_rows_%s.log" % (date_time.strftime("%Y%m%d-%H%M%S"))
 
         log_msg = "Found %d invalid rows. Logging to file '%s'" % (invalid_row_count, invalid_row_file)
 
@@ -308,25 +239,23 @@ def main(parsed_args):
 
 ##############################
 if __name__ == "__main__":
-
     ############################
     # shell args
     #
-    # --dry-run                             read data dump file and output sql statements.
-    # -cfg conf.json                        database config     not required
-    # doi.org_10.25976_0gvo-9d12.csv        data dump file      required
+    # --dry-run                                              read data dump file and output sql statements.
+    # -cfg cnv-flowworks.json                                 database config     not required
+    # NorthVancouverCityHall_export_20240328073312.csv       data dump file      required
     ############################
 
     # reads sys.argv
-    parser = argparse.ArgumentParser(description='Import data from a CoSMo data dump into a configured database.')
-    parser.add_argument('-q', '--quiet', action='store_true', dest='quiet',
-                        help='Quiet mode. Limits ncurses status output and similar.')
-    parser.add_argument('--dry-run', action='store_true', dest='dry_run',
+    parser = argparse.ArgumentParser(
+                        description='Import data from a CNV Flowworks data dump into a configured database.')
+    parser.add_argument('--dry-run', action='store_const', const=1, dest='dryrun',
                         help='Output database insert statements. Does not write to database.')
-    parser.add_argument('-cfg', '--config-file', type=str, dest='db_cfg_file',
-                        help='Database config file in json format. Ex: cosmo.json')
-    parser.add_argument(nargs=1, dest='data_dump_file', type=str,
-                        help='CoSMo data dump file. Ex: doi.org_10.25976_0gvo-9d12.csv')
+    parser.add_argument('-cfg', nargs=1, dest='db_cfg_file',
+                        help='Database config file in json format. Ex: cnv-flowworks.json')
+    parser.add_argument(nargs=1, dest='data_dump_file',
+                        help='CNV Flowworks data dump file. Ex: NorthVancouverCityHall_export_20240328073312.csv')
 
     # call main with parsed args
     main(parser.parse_args())

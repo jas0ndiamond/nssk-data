@@ -1,0 +1,21 @@
+{
+  "data-sources": {
+    "cosmo": {
+      "dump-destination-dir": "",
+      "logdir": ""
+    },
+    "cnv-rainfall": {
+      "dump-destination-dir": "",
+      "user": "",
+      "pass": ""
+    },
+    "dnv-whitewater": {
+      "dump-destination-dir": "",
+      "logdir": "",
+      "api-key": ""
+    }
+  },
+  "importer": {
+    "global-options": " -q "
+  }
+}

@@ -22,11 +22,11 @@ from src.exception.DataValidationException import DataValidationException
 
 class RainfallEventMeasurementsDataEntry(DataEntry):
     # needs to match database table schema
-    CNV_TIMESTAMP_FIELD = "CNV_RAINFALL_TIMESTAMP"
-    CNV_RAINFALL_AMOUNT_FIELD = "CNV_RAINFALL_AMOUNT"
+    CNV_FLOWWORKS_TIMESTAMP_FIELD = "CNV_FLOWWORKS_TIMESTAMP"
+    CNV_FLOWWORKS_RAINFALL_AMOUNT_FIELD = "CNV_FLOWWORKS_RAINFALL_AMOUNT"
     CNV_AIR_TEMPERATURE_FIELD = "CNV_AIR_TEMPERATURE"
     COSMO_CONDUCTANCE_RESULT_FIELD = "COSMO_CONDUCTANCE_RESULT"
-    DNV_WHITEWATER_FLOW_READING_FIELD = "DNV_WHITEWATER_FLOW_READING"
+    DNV_FLOWWORKS_FLOW_READING_FIELD = "DNV_WHITEWATER_FLOW_READING"
     RAINFALL_EVENT_ID_FIELD = "RAINFALL_EVENT_ID"
 
     # row_obj is any structure that can be indexed and is iterable
@@ -47,21 +47,21 @@ class RainfallEventMeasurementsDataEntry(DataEntry):
         # fields comprising the timestamp
 
         # cnv rainfall timestamp
-        if (fields[RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD] == '' or
-                fields[RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD] is None):
-            raise DataValidationException("found invalid CNV_RAINFALL_TIMESTAMP [%s]" %
-                                          fields[RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD])
+        if (fields[RainfallEventMeasurementsDataEntry.CNV_FLOWWORKS_TIMESTAMP_FIELD] == '' or
+                fields[RainfallEventMeasurementsDataEntry.CNV_FLOWWORKS_TIMESTAMP_FIELD] is None):
+            raise DataValidationException("found invalid CNV_FLOWWORKS_TIMESTAMP [%s]" %
+                                          fields[RainfallEventMeasurementsDataEntry.CNV_FLOWWORKS_TIMESTAMP_FIELD])
 
         # cnv rainfall amount present check. required.
-        if (fields[RainfallEventMeasurementsDataEntry.CNV_RAINFALL_AMOUNT_FIELD] == ''
-                or fields[RainfallEventMeasurementsDataEntry.CNV_RAINFALL_AMOUNT_FIELD] is None):
-            raise DataValidationException("Found None or empty CNV_RAINFALL_AMOUNT [%s]" %
-                                          fields[RainfallEventMeasurementsDataEntry.CNV_RAINFALL_AMOUNT_FIELD])
+        if (fields[RainfallEventMeasurementsDataEntry.CNV_FLOWWORKS_RAINFALL_AMOUNT_FIELD] == ''
+                or fields[RainfallEventMeasurementsDataEntry.CNV_FLOWWORKS_RAINFALL_AMOUNT_FIELD] is None):
+            raise DataValidationException("Found None or empty CNV_FLOWWORKS_RAINFALL_AMOUNT [%s]" %
+                                          fields[RainfallEventMeasurementsDataEntry.CNV_FLOWWORKS_RAINFALL_AMOUNT_FIELD])
 
         # check cnv rainfall > 0
-        if float(fields[RainfallEventMeasurementsDataEntry.CNV_RAINFALL_AMOUNT_FIELD]) < 0:
-            raise DataValidationException("Found invalid CNV_RAINFALL_AMOUNT value [%s]" %
-                                          fields[RainfallEventMeasurementsDataEntry.CNV_RAINFALL_AMOUNT_FIELD])
+        if float(fields[RainfallEventMeasurementsDataEntry.CNV_FLOWWORKS_RAINFALL_AMOUNT_FIELD]) < 0:
+            raise DataValidationException("Found invalid CNV_FLOWWORKS_RAINFALL_AMOUNT value [%s]" %
+                                          fields[RainfallEventMeasurementsDataEntry.CNV_FLOWWORKS_RAINFALL_AMOUNT_FIELD])
 
         # cosmo conductance value. Can be none if there's no correlated measurement. Validity check on value if present
         # check that conductance measurement is not negative. stored as string
@@ -74,11 +74,11 @@ class RainfallEventMeasurementsDataEntry(DataEntry):
         # dnv whitewater flow reading. Can be none if there's no correlated measurement.
         # Validity check on value if present
         # check that flow reading is not negative. stored as string
-        if (fields[RainfallEventMeasurementsDataEntry.DNV_WHITEWATER_FLOW_READING_FIELD] != '' and
-                fields[RainfallEventMeasurementsDataEntry.DNV_WHITEWATER_FLOW_READING_FIELD] is not None and
-                float(fields[RainfallEventMeasurementsDataEntry.DNV_WHITEWATER_FLOW_READING_FIELD]) < 0):
+        if (fields[RainfallEventMeasurementsDataEntry.DNV_FLOWWORKS_FLOW_READING_FIELD] != '' and
+                fields[RainfallEventMeasurementsDataEntry.DNV_FLOWWORKS_FLOW_READING_FIELD] is not None and
+                float(fields[RainfallEventMeasurementsDataEntry.DNV_FLOWWORKS_FLOW_READING_FIELD]) < 0):
             raise DataValidationException("Found invalid DNV_WHITEWATER_FLOW_READING_FIELD [%s]" %
-                                          fields[RainfallEventMeasurementsDataEntry.DNV_WHITEWATER_FLOW_READING_FIELD])
+                                          fields[RainfallEventMeasurementsDataEntry.DNV_FLOWWORKS_FLOW_READING_FIELD])
 
         # event id
         if (fields[RainfallEventMeasurementsDataEntry.RAINFALL_EVENT_ID_FIELD] is None

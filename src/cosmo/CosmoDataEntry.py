@@ -99,8 +99,9 @@ class CosmoDataEntry(DataEntry):
             raise DataValidationException("Found invalid CharacteristicName [%s]" % fields['CharacteristicName'])
 
         # check that conductance measurements are greater than 0. stored as string
+        # TODO: is 0 a valid reading?
         if ((fields['CharacteristicName'] == 'Conductivity' or fields['CharacteristicName'] == 'Specific conductance')
-                and float(fields['ResultValue']) < 0):
+                and float(fields['ResultValue']) < 0.0):
             raise DataValidationException("Found invalid Conductivity/Conductance value [%s]" % fields['ResultValue'])
 
         # water levels outside the range of 10 to 11.5

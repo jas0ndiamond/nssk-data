@@ -1,0 +1,25 @@
+# starting with conductance readings over 500
+
+select
+    CosmoTimestamp,
+    MAX(CASE WHEN CharacteristicName = "Specific conductance" THEN ResultValue END) AS Specific_Conductance,
+    MAX(CASE WHEN CharacteristicName = "Temperature water" THEN ResultValue END) AS Temperature_Water,
+    MAX(CASE WHEN CharacteristicName = "Water level (probe)" THEN ResultValue END) AS Water_Level
+    from (
+        WITH q1 AS (
+            SELECT
+                CAST(CONCAT(NSSK_COSMO.$SITE.ActivityStartDate, ' ', NSSK_COSMO.$SITE.ActivityStartTime) AS DATETIME) AS CosmoTimestamp,
+                CharacteristicName,
+                ResultValue
+            FROM NSSK_COSMO.$SITE
+        )
+        select
+        CosmoTimestamp,
+        CharacteristicName,
+        ResultValue
+        from q1
+        WHERE
+        (CharacteristicName = "Specific conductance" or CharacteristicName = "Temperature water" or CharacteristicName = "Water level (probe)")
+    ) q2
+    group by CosmoTimestamp
+    having Specific_Conductance is not null and Specific_Conductance > $CONDUCTANCE_AMT;

@@ -1,7 +1,9 @@
 from mysql.connector import connect, Error, IntegrityError
+
 from datetime import datetime
 
 import logging
+import os
 
 from src.importer.DBConfig import DBConfig
 from src.importer.DBConfigFactory import DBConfigFactory
@@ -19,6 +21,9 @@ class DBImporter:
         self.logger.setLevel(logging.DEBUG)
 
         self.logger.info("Building DBImporter with config file %s" % db_config_file)
+
+        if not os.path.isfile(db_config_file):
+            raise FileNotFoundError("Could not find DB config file '%s'" % db_config_file)
 
         # store the file name, read it when we're ready for the db inserts
         self.db_config_file = db_config_file
@@ -50,6 +55,8 @@ class DBImporter:
     def set_schema_mapping(self, schema_mapping):
         self.schema_mapping = schema_mapping
 
+    # add a DataEntry object to db ingest queue. requires a schema to be set with set_schema.
+    # an optional schema mapping may be set with set_schema_mapping to resolve db fields from expected input fields
     # entry is a DataEntry object
     def add(self, entry):
 
@@ -57,7 +64,7 @@ class DBImporter:
         # is entry a subclass of DataEntry?
         # is the entry object value collection the same size as the schema?
 
-        # check if a schema is defined
+        # check if a schema or schema mapping is defined
         if self.schema is None or len(self.schema) <= 0:
             raise "Database schema must be defined"
 
@@ -157,7 +164,7 @@ class DBImporter:
                     port=int(config[DBConfig.CONFIG_PORT]),
                     user=config[DBConfig.CONFIG_USER],
                     password=config[DBConfig.CONFIG_PASS],
-                    database=config[DBConfig.CONFIG_DBASE],
+                    database=config[DBConfig.CONFIG_DBASE]
             ) as connection:
 
                 config[DBConfig.CONFIG_USER] = None

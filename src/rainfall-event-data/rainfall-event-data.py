@@ -18,7 +18,7 @@ from RainfallEventMeasurementsDataEntry import RainfallEventMeasurementsDataEntr
 
 # compile rainfall event data for the cnv region
 
-# designed to run once after both cosmo-import and cnv-rainfall-import have run.
+# designed to run once after both cosmo-import and cnv-flowworks-import have run.
 
 # query the data in segments. don't want to hold a massive result in memory.
 
@@ -56,7 +56,7 @@ WINDOW_RETRIEVE_SIZE = 200
 
 ##########
 
-DNV_WHITEWATER_SITES = [
+DNV_FLOWWORKS_SITES = [
     "DNV"
 ]
 
@@ -66,33 +66,33 @@ COSMO_SENSOR_SITES = [
 ]
 
 SCHEMA = [
-    RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD,
-    RainfallEventMeasurementsDataEntry.CNV_RAINFALL_AMOUNT_FIELD,
+    RainfallEventMeasurementsDataEntry.CNV_FLOWWORKS_TIMESTAMP_FIELD,
+    RainfallEventMeasurementsDataEntry.CNV_FLOWWORKS_RAINFALL_AMOUNT_FIELD,
     RainfallEventMeasurementsDataEntry.CNV_AIR_TEMPERATURE_FIELD,
     RainfallEventMeasurementsDataEntry.COSMO_CONDUCTANCE_RESULT_FIELD,
-    RainfallEventMeasurementsDataEntry.DNV_WHITEWATER_FLOW_READING_FIELD,
+    RainfallEventMeasurementsDataEntry.DNV_FLOWWORKS_FLOW_READING_FIELD,
     RainfallEventMeasurementsDataEntry.RAINFALL_EVENT_ID_FIELD
 ]
 
 SOURCE_DB_NSSK_COSMO = "NSSK_COSMO"
-SOURCE_DB_CNV_RAINFALL = "NSSK_CNV_RAINFALL"
-SOURCE_DB_DNV_WHITEWATER = "NSSK_DNV_WHITEWATER"
+SOURCE_DB_CNV_FLOWWORKS = "NSSK_CNV_FLOWWORKS"
+SOURCE_DB_DNV_FLOWWORKS = "NSSK_DNV_FLOWWORKS"
 
 # only one site in dataset
-SOURCE_DB_CNV_RAINFALL_SITE = "CNV"
+SOURCE_DB_CNV_FLOWWORKS_SITE = "CNVRain"
 
 # only one site in dataset
-SOURCE_DB_DNV_WHITEWATER_SITE = "DNV"
+SOURCE_DB_DNV_FLOWWORKS_SITE = "DNV"
 
 TARGET_DATABASE = None
 
 ###############
 # templates
 
-DNV_WHITEWATER_DATA_WINDOW_TEMPLATE = Template(
-    open("../rainfall-event-data/sql/get-dnv-whitewater-data-for-rainfall-event.sql.template").read())
+DNV_FLOWWORKS_DATA_WINDOW_TEMPLATE = Template(
+    open("sql/get-dnv-flowworks-data-for-rainfall-event.sql.template").read())
 
-CNV_RAINFALL_TEMPLATE = Template(
+CNV_FLOWWORKS_TEMPLATE = Template(
     open("../rainfall-event-data/sql/get-cnv-data-for-rainfall-event.sql.template").read())
 
 # TODO dont read this every time
@@ -151,14 +151,14 @@ def precheck(conf_file):
 
                     # cnv rainfall source database
                     cursor.reset()
-                    cursor.execute("SHOW DATABASES LIKE '%s';" % SOURCE_DB_CNV_RAINFALL)
+                    cursor.execute("SHOW DATABASES LIKE '%s';" % SOURCE_DB_CNV_FLOWWORKS)
                     cursor.fetchall()
 
                     if cursor.rowcount != 1:
                         # TODO: custom exception
-                        raise Exception("Could not find source database %s" % SOURCE_DB_CNV_RAINFALL)
+                        raise Exception("Could not find source database %s" % SOURCE_DB_CNV_FLOWWORKS)
                     else:
-                        logger.debug("Found source database %s" % SOURCE_DB_CNV_RAINFALL)
+                        logger.debug("Found source database %s" % SOURCE_DB_CNV_FLOWWORKS)
 
                     # check that our destination tables exist
                     for sensor in COSMO_SENSOR_SITES:
@@ -200,14 +200,14 @@ def load_rainfall_event_intervals(cursor):
 
 
 # load the rainfall data for the given time interval. return a list of tuples that will be used in correlation steps.
-def load_cnv_rainfall_data(cursor, start_datetime, end_datetime):
-    get_cnv_rainfall_data_query_sql = CNV_RAINFALL_TEMPLATE.substitute(
-        CNV_RAINFALL_START_DATETIME=start_datetime,
-        CNV_RAINFALL_END_DATETIME=end_datetime,
-        SITE=SOURCE_DB_CNV_RAINFALL_SITE
+def load_cnv_flowworks_data(cursor, start_datetime, end_datetime):
+    get_cnv_flowworks_data_query_sql = CNV_FLOWWORKS_TEMPLATE.substitute(
+        CNV_FLOWWORKS_START_DATETIME=start_datetime,
+        CNV_FLOWWORKS_END_DATETIME=end_datetime,
+        SITE=SOURCE_DB_CNV_FLOWWORKS_SITE
     )
 
-    cursor.execute(get_cnv_rainfall_data_query_sql)
+    cursor.execute(get_cnv_flowworks_data_query_sql)
 
     row = cursor.fetchone()
 
@@ -217,8 +217,8 @@ def load_cnv_rainfall_data(cursor, start_datetime, end_datetime):
     while row is not None:
         data.append(
             {
-                RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD: row[0],
-                RainfallEventMeasurementsDataEntry.CNV_RAINFALL_AMOUNT_FIELD: float(row[1]),
+                RainfallEventMeasurementsDataEntry.CNV_FLOWWORKS_TIMESTAMP_FIELD: row[0],
+                RainfallEventMeasurementsDataEntry.CNV_FLOWWORKS_RAINFALL_AMOUNT_FIELD: float(row[1]),
                 RainfallEventMeasurementsDataEntry.CNV_AIR_TEMPERATURE_FIELD: float(row[2])
             }
         )
@@ -229,25 +229,25 @@ def load_cnv_rainfall_data(cursor, start_datetime, end_datetime):
 
 
 # returns dict of sites to data rows
-def get_dnv_whitewater_data_window(cursor, range_start_datetime, range_end_datetime):
+def get_dnv_flowworks_data_window(cursor, range_start_datetime, range_end_datetime):
     results = {}
 
-    logger.debug("Retrieving DNV Whitewater Data window for %s => %s" % (range_start_datetime, range_end_datetime))
+    logger.debug("Retrieving DNV Flowworks Data window for %s => %s" % (range_start_datetime, range_end_datetime))
 
     # define the search space
-    search_dnv_whitewater_start_datetime = range_start_datetime - datetime.timedelta(
+    search_dnv_flowworks_start_datetime = range_start_datetime - datetime.timedelta(
         seconds=CORRELATION_WINDOW)
-    search_dnv_whitewater_end_datetime = range_end_datetime + datetime.timedelta(
+    search_dnv_flowworks_end_datetime = range_end_datetime + datetime.timedelta(
         seconds=CORRELATION_WINDOW)
 
-    for site in DNV_WHITEWATER_SITES:
-        get_dnv_whitewater_query_sql = DNV_WHITEWATER_DATA_WINDOW_TEMPLATE.substitute(
-            DNV_WHITEWATER_START_DATETIME=search_dnv_whitewater_start_datetime,
-            DNV_WHITEWATER_END_DATETIME=search_dnv_whitewater_end_datetime,
+    for site in DNV_FLOWWORKS_SITES:
+        get_dnv_flowworks_query_sql = DNV_FLOWWORKS_DATA_WINDOW_TEMPLATE.substitute(
+            DNV_FLOWWORKS_START_DATETIME=search_dnv_flowworks_start_datetime,
+            DNV_FLOWWORKS_END_DATETIME=search_dnv_flowworks_end_datetime,
             SITE=site
         )
 
-        cursor.execute(get_dnv_whitewater_query_sql)
+        cursor.execute(get_dnv_flowworks_query_sql)
 
         data_rows = []
 
@@ -257,7 +257,7 @@ def get_dnv_whitewater_data_window(cursor, range_start_datetime, range_end_datet
             data_rows.extend(rows)
             rows = cursor.fetchmany(WINDOW_RETRIEVE_SIZE)
 
-        logger.debug("Retrieved DNV Whitewater Data window of size %d for site %s" % (len(data_rows), site))
+        logger.debug("Retrieved DNV Flowworks Data window of size %d for site %s" % (len(data_rows), site))
 
         results[site] = data_rows
 
@@ -300,12 +300,12 @@ def get_cosmo_data_window(cursor, range_start_datetime, range_end_datetime):
     return results
 
 
-# return a cosmo conductance within the correlation threshold for cnv_timestamp.
-# if multiple results in the search window are returned from the database, return the one nearest to the cnv_timestamp
-def correlate_with_cosmo_conductance(cnv_rainfall_timestamp, search_space, sensor_site):
+# return a cosmo conductance within the correlation threshold for cnv_flowworks_timestamp.
+# if multiple results in the search window are returned from the database, return the one nearest to the cnv_flowworks_timestamp
+def correlate_with_cosmo_conductance(cnv_flowworks_rainfall_timestamp, search_space, sensor_site):
     if TRACE_LOGGING:
         logger.debug("Attempting to correlate a CoSMo measurement with CNV Rainfall timestamp %s for site %s"
-                     % (cnv_rainfall_timestamp, sensor_site))
+                     % (cnv_flowworks_rainfall_timestamp, sensor_site))
 
     # default measurement is a tuple with None values for measurement timestamp and value
     correlated_measurement = (None, None)
@@ -326,9 +326,9 @@ def correlate_with_cosmo_conductance(cnv_rainfall_timestamp, search_space, senso
             best_measurement_timestamp = row[0]
             best_measurement_value = float(row[1])
         else:
-            timestamp_distance = int(abs((cnv_rainfall_timestamp - row[0]).total_seconds()))
+            timestamp_distance = int(abs((cnv_flowworks_rainfall_timestamp - row[0]).total_seconds()))
 
-            # is this measurement is closer to the cnv_timestamp than the existing best measurement?
+            # is this measurement is closer to the cnv_flowworks_timestamp than the existing best measurement?
             if timestamp_distance < closest_timestamp_distance:
 
                 best_measurement_timestamp = row[0]
@@ -350,13 +350,14 @@ def correlate_with_cosmo_conductance(cnv_rainfall_timestamp, search_space, senso
     return correlated_measurement
 
 
-# return a dnv whitewater flow reading within the correlation threshold for cnv_timestamp.
-# if multiple results in the search window are returned from the database, return the one nearest to the cnv_timestamp
+# return a dnv flowworks flow reading within the correlation threshold for cnv_flowworks_timestamp.
+# if multiple results in the search window are returned from the database, return the one nearest to the
+# cnv_flowworks_timestamp
 # search_space is a dict of sites bound to arrays of rows
-def correlate_with_dnv_flow_reading(cnv_rainfall_timestamp, search_space, sensor_site):
+def correlate_with_dnv_flow_reading(cnv_flowworks_rainfall_timestamp, search_space, sensor_site):
     if TRACE_LOGGING:
-        logger.debug("Attempting to correlate a DNV Whitewater measurement with CNV Rainfall timestamp %s"
-                     % cnv_rainfall_timestamp)
+        logger.debug("Attempting to correlate a DNV Flowworks measurement with CNV Rainfall timestamp %s"
+                     % cnv_flowworks_rainfall_timestamp)
 
     # default measurement is a tuple with None values for measurement timestamp and value
     correlated_measurement = (None, None)
@@ -377,23 +378,23 @@ def correlate_with_dnv_flow_reading(cnv_rainfall_timestamp, search_space, sensor
             best_measurement_timestamp = row[0]
             best_measurement_value = float(row[1])
         else:
-            timestamp_distance = int(abs((cnv_rainfall_timestamp - row[0]).total_seconds()))
+            timestamp_distance = int(abs((cnv_flowworks_rainfall_timestamp - row[0]).total_seconds()))
 
-            # is this measurement is closer to the cnv_timestamp than the existing best measurement?
+            # is this measurement is closer to the cnv_flowworks_timestamp than the existing best measurement?
             if timestamp_distance < closest_timestamp_distance:
 
                 best_measurement_timestamp = row[0]
                 best_measurement_value = float(row[1])
 
                 if TRACE_LOGGING:
-                    logger.debug("Found new best DNV Whitewater measurement %s => %s." %
+                    logger.debug("Found new best DNV Flowworks measurement %s => %s." %
                                  (best_measurement_timestamp, best_measurement_value))
 
                 closest_timestamp_distance = timestamp_distance
             else:
                 # this measurement is not closer to the cnv timestamp than the existing best measurement
                 if TRACE_LOGGING:
-                    logger.debug("Sticking with existing best DNV Whitewater measurement. Continuing...")
+                    logger.debug("Sticking with existing best DNV Flowworks measurement. Continuing...")
 
     if best_measurement_timestamp is not None and best_measurement_value is not None:
         correlated_measurement = (best_measurement_timestamp, best_measurement_value)
@@ -428,7 +429,7 @@ def compile_rainfall_event_data(db_config_filename, db_importer):
                     #       get start/end dates of event
                     #       populate rainfall and air temperatures within date range
                     #       correlate cosmo conductance data with cnv timestamps within date range
-                    #       correlate dnv whitewater data with cnv timestamps within date range
+                    #       correlate dnv flowworks data with cnv timestamps within date range
 
                     # [start_timestamp, end_timestamp, event_id]
                     rainfall_events = load_rainfall_event_intervals(cursor)
@@ -439,8 +440,8 @@ def compile_rainfall_event_data(db_config_filename, db_importer):
                     for rainfall_event in rainfall_events:
                         (start_datetime, end_datetime, event_id) = rainfall_event
 
-                        # get dnv whitewater window for this rainfall event (start_datetime - 5, end_datetime + 5)
-                        dnv_whitewater_data_window = get_dnv_whitewater_data_window(
+                        # get dnv flowworks window for this rainfall event (start_datetime - 5, end_datetime + 5)
+                        dnv_flowworks_data_window = get_dnv_flowworks_data_window(
                             cursor, start_datetime, end_datetime
                         )
 
@@ -449,10 +450,11 @@ def compile_rainfall_event_data(db_config_filename, db_importer):
                             cursor, start_datetime, end_datetime
                         )
 
-                        # {CNV_TIMESTAMP_FIELD, CNV_RAINFALL_AMOUNT_FIELD, CNV_AIRTEMP_FIELD}
-                        for cnv_rainfall_measurement in load_cnv_rainfall_data(cursor, start_datetime, end_datetime):
+                        # {CNV_FLOWWORKS_TIMESTAMP_FIELD, CNV_FLOWWORKS_RAINFALL_AMOUNT_FIELD, CNV_AIRTEMP_FIELD}
+                        for cnv_flowworks_rainfall_measurement in load_cnv_flowworks_data(
+                                cursor, start_datetime, end_datetime):
 
-                            # pprint(cnv_rainfall_measurement)
+                            # pprint(cnv_flowworks_rainfall_measurement)
                             compiled_event_data = dict()
 
                             # set rainfall event id
@@ -462,35 +464,35 @@ def compile_rainfall_event_data(db_config_filename, db_importer):
 
                             # retrieve cnv measurement data
                             compiled_event_data[
-                                RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD
-                            ] = cnv_rainfall_measurement.get(
-                                RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD)
+                                RainfallEventMeasurementsDataEntry.CNV_FLOWWORKS_TIMESTAMP_FIELD
+                            ] = cnv_flowworks_rainfall_measurement.get(
+                                RainfallEventMeasurementsDataEntry.CNV_FLOWWORKS_TIMESTAMP_FIELD)
 
                             compiled_event_data[
-                                RainfallEventMeasurementsDataEntry.CNV_RAINFALL_AMOUNT_FIELD
-                            ] = cnv_rainfall_measurement.get(
-                                RainfallEventMeasurementsDataEntry.CNV_RAINFALL_AMOUNT_FIELD)
+                                RainfallEventMeasurementsDataEntry.CNV_FLOWWORKS_RAINFALL_AMOUNT_FIELD
+                            ] = cnv_flowworks_rainfall_measurement.get(
+                                RainfallEventMeasurementsDataEntry.CNV_FLOWWORKS_RAINFALL_AMOUNT_FIELD)
 
                             compiled_event_data[
                                 RainfallEventMeasurementsDataEntry.CNV_AIR_TEMPERATURE_FIELD
-                            ] = cnv_rainfall_measurement.get(
+                            ] = cnv_flowworks_rainfall_measurement.get(
                                 RainfallEventMeasurementsDataEntry.CNV_AIR_TEMPERATURE_FIELD)
 
-                            # TODO use DNV_WW_SITES. need to break coupling where the cosmo section creates
+                            # TODO use DNV_FLOWWORKS_SITES. need to break coupling where the cosmo section creates
                             #  the data entry
                             ################
-                            # correlate dnv whitewater flow reading with cnv rainfall measurement
+                            # correlate dnv flowworks flow reading with cnv rainfall measurement
 
-                            # for sensor_site in DNV_WHITEWATER_SITES:
+                            # for sensor_site in DNV_FLOWWORKS_SITES:
                             # (timestamp, value)
                             (correlated_flow_timestamp, correlated_flow_value) = correlate_with_dnv_flow_reading(
-                                cnv_rainfall_measurement.get(RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD),
-                                dnv_whitewater_data_window,
-                                SOURCE_DB_DNV_WHITEWATER_SITE
+                                cnv_flowworks_rainfall_measurement.get(RainfallEventMeasurementsDataEntry.CNV_FLOWWORKS_TIMESTAMP_FIELD),
+                                dnv_flowworks_data_window,
+                                SOURCE_DB_DNV_FLOWWORKS_SITE
                             )
 
                             compiled_event_data[
-                                RainfallEventMeasurementsDataEntry.DNV_WHITEWATER_FLOW_READING_FIELD
+                                RainfallEventMeasurementsDataEntry.DNV_FLOWWORKS_FLOW_READING_FIELD
                             ] = correlated_flow_value
 
                             ################
@@ -500,8 +502,8 @@ def compile_rainfall_event_data(db_config_filename, db_importer):
                                 # even if no conductance value can be correlated
 
                                 (conductance_timestamp, conductance_value) = correlate_with_cosmo_conductance(
-                                    cnv_rainfall_measurement.get(
-                                        RainfallEventMeasurementsDataEntry.CNV_TIMESTAMP_FIELD),
+                                    cnv_flowworks_rainfall_measurement.get(
+                                        RainfallEventMeasurementsDataEntry.CNV_FLOWWORKS_TIMESTAMP_FIELD),
                                     cosmo_data_window,
                                     sensor_site
                                 )

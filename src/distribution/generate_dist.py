@@ -22,49 +22,41 @@ sys.path.append(str(path_root))
 from src.importer.DBConfigFactory import DBConfigFactory, DBConfig
 
 ########################
-DEFAULT_CONFIG_FILE = "./conf/config.json"
+# constants
+
+DEFAULT_CONFIG_FILE = "conf/dist.prod.json"
 
 FETCH_SIZE = 5000
+
+SPECIFIC_CONDUCTANCE_THRESHOLD = 500
 
 ########################
 # database and tables
 
-COSMO_DB = "NSSK_COSMO"
-COSMO_TIMESTAMP_FIELD = ""
-COSMO_SITES = [
-    "WAGG01",
-    "WAGG03"
-]
+# TODO: sites lists don't seem to be used. use dump file dicts instead?
 
-CNV_RAINFALL_DB = "NSSK_CNV_RAINFALL"
-CNV_RAINFALL_TIMESTAMP_FIELD = "MeasurementTimestamp"
-CNV_RAINFALL_SITES = [
-    "CNV"
-]
+NSSK_COSMO_DB = "NSSK_COSMO"
 
-DNV_WHITEWATER_DB = "NSSK_DNV_WHITEWATER"
-DNV_WHITEWATER_TIMESTAMP_FIELD = "MeasurementTimestamp"
-DNV_WHITEWATER_SITES = [
-    "DNV"
-]
+NSSK_CNV_FLOWWORKS_DB = "NSSK_CNV_FLOWWORKS"
+NSSK_CNV_FLOWWORKS_TIMESTAMP_FIELD = "MeasurementTimestamp"
+
+NSSK_DNV_FLOWWORKS_DB = "NSSK_DNV_FLOWWORKS"
+NSSK_DNV_FLOWWORKS_TIMESTAMP_FIELD = "MeasurementTimestamp"
 
 NSSK_CONDUCTIVITY_RAINFALL_CORRELATION_DB = "NSSK_CONDUCTIVITY_RAINFALL_CORRELATION"
 NSSK_CONDUCTIVITY_RAINFALL_CORRELATION_TIMESTAMP_FIELD = "CosmoTimeStamp"
-NSSK_CONDUCTIVITY_RAINFALL_CORRELATION_SITES = [
-    "WAGG01",
-    "WAGG03"
-]
 
 NSSK_RAINFALL_EVENTS_DB = "NSSK_RAINFALL_EVENT_DATA"
 NSSK_RAINFALL_EVENTS_TIMESTAMP_FIELD = "EVENT_START_TIMESTAMP"
 NSSK_RAINFALL_EVENTS_TABLE = "RAINFALL_EVENTS"
 
 NSSK_RAINFALL_EVENT_DATA_DB = "NSSK_RAINFALL_EVENT_DATA"
-NSSK_RAINFALL_EVENT_DATA_TIMESTAMP_FIELD = "CNV_RAINFALL_TIMESTAMP"
-NSSK_RAINFALL_EVENT_DATA_SITES = [
-    "WAGG01",
-    "WAGG03"
-]
+NSSK_RAINFALL_EVENT_DATA_TIMESTAMP_FIELD = "CNV_FLOWWORKS_TIMESTAMP"
+
+NSSK_CNV_HYDROMETRIC_DB = "NSSK_CNV_HYDROMETRIC"
+
+NSSK_WATERRANGERS_DB = "NSSK_WATERRANGERS"
+NSSK_WATERRANGERS_TIMESTAMP_FIELD = "ObservedOn"
 
 ########################
 # html file indexing everything
@@ -78,12 +70,12 @@ FAVICON_DIR = "./res/favicon/"
 # dump files
 # TODO move all this to a json file
 
-DUMP_FILES_CNV_RAINFALL = {
-    "CNV": "nssk_cnv_rainfall.csv"
+DUMP_FILES_CNV_FLOWWORKS = {
+    "CNVRain": "nssk_csv_flowworks.csv"
 }
 
-DUMP_FILES_DNV_WHITEWATER = {
-    "DNV": "nssk_dnv_whitewater.csv"
+DUMP_FILES_DNV_FLOWWORKS = {
+    "DNV": "nssk_dnv_flowworks.csv"
 }
 
 # dump file for each CoSMo site
@@ -124,6 +116,34 @@ DUMP_FILES_RAINFALL_EVENT_DATA = {
     "WAGG03": "nssk_rainfall_event_data.WAGG03.csv"
 }
 
+DUMP_FILES_CNV_HYDROMETRIC = {
+    "WaggCreek": "nssk_cnv_hydrometric.WaggCreek.csv"
+}
+
+DUMP_FILES_CHLORIDE_ACUITY = {
+    "WAGG01": "nssk_chloride_acuity.WAGG01.csv",
+    "WAGG03": "nssk_chloride_acuity.WAGG03.csv"
+}
+
+DUMP_FILES_WATERRANGERS = {
+    "MIS_M_01": "nssk_waterrangers_mis_m_01.csv",
+    "MIS_E_01": "nssk_waterrangers_mis_e_01.csv",
+    "MIS_W_01": "nssk_waterrangers_mis_w_01.csv",
+    "MOS_M_01": "nssk_waterrangers_mos_m_01.csv",
+    "WAG_E_01": "nssk_waterrangers_wag_e_01.csv",
+    "WAG_E_02": "nssk_waterrangers_wag_e_02.csv",
+    "WAG_E_03": "nssk_waterrangers_wag_e_03.csv",
+    "WAG_E_05": "nssk_waterrangers_wag_e_05.csv",
+    "WAG_E_06a": "nssk_waterrangers_wag_e_06a.csv",
+    "WAG_E_06b": "nssk_waterrangers_wag_e_06b.csv",
+    "WAG_E_07": "nssk_waterrangers_wag_e_07.csv",
+    "WAG_M_01": "nssk_waterrangers_wag_m_01.csv",
+    "WAG_M_02": "nssk_waterrangers_wag_m_02.csv",
+    "WAG_M_03": "nssk_waterrangers_wag_m_03.csv",
+    "WAG_W_02a": "nssk_waterrangers_wag_w_02a.csv",
+    "WAG_W_02b": "nssk_waterrangers_wag_w_02b.csv",
+    "WAG_W_03": "nssk_waterrangers_wag_w_03.csv"
+}
 
 ##############################
 
@@ -157,7 +177,6 @@ def precheck(db_config_filename):
     except Error as e:
         print("Error connecting to database", e)
 
-
 def run_dump(db_config_filename):
     config = DBConfigFactory.build(db_config_filename)
 
@@ -180,11 +199,11 @@ def run_dump(db_config_filename):
             try:
                 with connection.cursor() as cursor:
 
-                    print("Dumping CNV Rainfall")
-                    dump_cnv_rainfall(cursor)
+                    print("Dumping CNV Flowworks")
+                    dump_cnv_flowworks(cursor)
 
-                    print("Dumping DNV Whitewater")
-                    dump_dnv_whitewater(cursor)
+                    print("Dumping DNV Flowworks")
+                    dump_dnv_flowworks(cursor)
 
                     print("Dumping CoSMo")
                     dump_cosmo(cursor)
@@ -201,6 +220,18 @@ def run_dump(db_config_filename):
                     print("Dumping Rainfall Event Data")
                     dump_rainfall_event_data(cursor)
 
+                    # dump cnv hydrometric
+                    print("Dumping CNV Hydrometric")
+                    dump_cnv_hydrometric_data(cursor)
+
+                    # dump chloride acuity
+                    print("Dumping Chloride Acuity")
+                    dump_chloride_acuity(cursor)
+
+                    # dump waterrangers
+                    print("Dumping Waterrangers")
+                    dump_waterrangers(cursor)
+
                     success = True
 
             except Error as e:
@@ -210,11 +241,10 @@ def run_dump(db_config_filename):
 
     return success
 
-
-def dump_cnv_rainfall(cursor):
-    for site in DUMP_FILES_CNV_RAINFALL:
+def dump_cnv_flowworks(cursor):
+    for site in DUMP_FILES_CNV_FLOWWORKS:
         # manually write header
-        cursor.execute("describe %s.%s" % (CNV_RAINFALL_DB, site))
+        cursor.execute("describe %s.%s" % (NSSK_CNV_FLOWWORKS_DB, site))
         rows = cursor.fetchall()
 
         schema = []
@@ -222,11 +252,11 @@ def dump_cnv_rainfall(cursor):
             schema.append(row[0])
 
         # dump table contents
-        with (open(TEMP_DIR + DUMP_FILES_CNV_RAINFALL[site], 'w') as writer):
+        with (open(TEMP_DIR + DUMP_FILES_CNV_FLOWWORKS[site], 'w') as writer):
             csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
             csv_writer.writerow(schema)
 
-            query = "SELECT * FROM %s.%s ORDER BY %s ASC" % (CNV_RAINFALL_DB, site, CNV_RAINFALL_TIMESTAMP_FIELD)
+            query = "SELECT * FROM %s.%s ORDER BY %s ASC" % (NSSK_CNV_FLOWWORKS_DB, site, NSSK_CNV_FLOWWORKS_TIMESTAMP_FIELD)
 
             # print("Query: %s" % query)
             cursor.execute(query)
@@ -237,11 +267,10 @@ def dump_cnv_rainfall(cursor):
                 csv_writer.writerows(rows)
                 rows = cursor.fetchmany(FETCH_SIZE)
 
-
-def dump_dnv_whitewater(cursor):
-    for site in DUMP_FILES_DNV_WHITEWATER:
+def dump_dnv_flowworks(cursor):
+    for site in DUMP_FILES_DNV_FLOWWORKS:
         # manually write header
-        cursor.execute("describe %s.%s" % (DNV_WHITEWATER_DB, site))
+        cursor.execute("describe %s.%s" % (NSSK_DNV_FLOWWORKS_DB, site))
         rows = cursor.fetchall()
 
         schema = []
@@ -249,13 +278,13 @@ def dump_dnv_whitewater(cursor):
             schema.append(row[0])
 
         # dump table contents
-        with (open(TEMP_DIR + DUMP_FILES_DNV_WHITEWATER[site], 'w') as writer):
+        with (open(TEMP_DIR + DUMP_FILES_DNV_FLOWWORKS[site], 'w') as writer):
             csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
             csv_writer.writerow(schema)
 
             query = (
                     "SELECT * FROM %s.%s ORDER BY %s ASC" %
-                    (DNV_WHITEWATER_DB, site, DNV_WHITEWATER_TIMESTAMP_FIELD)
+                    (NSSK_DNV_FLOWWORKS_DB, site, NSSK_DNV_FLOWWORKS_TIMESTAMP_FIELD)
             )
 
             # print("Query: %s" % query)
@@ -267,11 +296,10 @@ def dump_dnv_whitewater(cursor):
                 csv_writer.writerows(rows)
                 rows = cursor.fetchmany(FETCH_SIZE)
 
-
 def dump_cosmo(cursor):
     for site in DUMP_FILES_COSMO:
         # manually write header
-        cursor.execute("describe %s.%s" % (COSMO_DB, site))
+        cursor.execute("describe %s.%s" % (NSSK_COSMO_DB, site))
         rows = cursor.fetchall()
 
         schema = []
@@ -283,9 +311,9 @@ def dump_cosmo(cursor):
             csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
             csv_writer.writerow(schema)
 
-            query = "select * from %s.%s ORDER BY " % (COSMO_DB, site)
+            query = "select * from %s.%s ORDER BY " % (NSSK_COSMO_DB, site)
             query += "CAST(CONCAT_WS(' ', %s.%s.ActivityStartDate, %s.%s.ActivityStartTime) as DATETIME) ASC" % (
-                COSMO_DB, site, COSMO_DB, site
+                NSSK_COSMO_DB, site, NSSK_COSMO_DB, site
             )
 
             # print("Query: %s" % query)
@@ -297,9 +325,8 @@ def dump_cosmo(cursor):
                 csv_writer.writerows(rows)
                 rows = cursor.fetchmany(FETCH_SIZE)
 
-
 def dump_conductivity_rainfall_correlation(cursor):
-    for site in NSSK_CONDUCTIVITY_RAINFALL_CORRELATION_SITES:
+    for site in DUMP_FILES_CONDUCTIVITY_RAINFALL_CORRELATION:
         # manually write header
         cursor.execute("describe %s.%s" % (NSSK_CONDUCTIVITY_RAINFALL_CORRELATION_DB, site))
         rows = cursor.fetchall()
@@ -327,7 +354,6 @@ def dump_conductivity_rainfall_correlation(cursor):
             while rows is not None and rows:
                 csv_writer.writerows(rows)
                 rows = cursor.fetchmany(FETCH_SIZE)
-
 
 def dump_rainfall_events(cursor):
     # manually write header
@@ -357,7 +383,6 @@ def dump_rainfall_events(cursor):
         while rows is not None and rows:
             csv_writer.writerows(rows)
             rows = cursor.fetchmany(FETCH_SIZE)
-
 
 def dump_rainfall_event_data(cursor):
 
@@ -391,15 +416,104 @@ def dump_rainfall_event_data(cursor):
                 csv_writer.writerows(rows)
                 rows = cursor.fetchmany(FETCH_SIZE)
 
+def dump_waterrangers(cursor):
+    for site in DUMP_FILES_WATERRANGERS:
+        # manually write header
+        cursor.execute("describe %s.%s" % (NSSK_WATERRANGERS_DB, site))
+        rows = cursor.fetchall()
+
+        schema = []
+        for row in rows:
+            schema.append(row[0])
+
+        # dump table contents
+        with (open("%s%s" % (TEMP_DIR, DUMP_FILES_WATERRANGERS[site]), 'w') as writer):
+            csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
+            csv_writer.writerow(schema)
+
+            query = "select * from %s.%s ORDER BY %s ASC" % (
+                NSSK_WATERRANGERS_DB,
+                site,
+                NSSK_WATERRANGERS_TIMESTAMP_FIELD
+            )
+
+            # print("Query: %s" % query)
+            cursor.execute(query)
+
+            rows = cursor.fetchmany(FETCH_SIZE)
+
+            while rows is not None and rows:
+                csv_writer.writerows(rows)
+                rows = cursor.fetchmany(FETCH_SIZE)
+
+def dump_cnv_hydrometric_data(cursor):
+    # run a query rather than dump a table
+
+    for site in DUMP_FILES_CNV_HYDROMETRIC:
+        # manually write header
+        cursor.execute("describe %s.%s" % (NSSK_CNV_HYDROMETRIC_DB, site))
+        rows = cursor.fetchall()
+
+        schema = []
+        for row in rows:
+            schema.append(row[0])
+
+        # dump table contents
+        with (open(TEMP_DIR + DUMP_FILES_CNV_HYDROMETRIC[site], 'w') as writer):
+            csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
+            csv_writer.writerow(schema)
+
+            query = "select * from %s.%s ORDER BY " % (NSSK_CNV_HYDROMETRIC_DB, site)
+            query += "%s.%s.MeasurementTimestamp ASC" % (NSSK_CNV_HYDROMETRIC_DB, site)
+
+            # print("Query: %s" % query)
+            cursor.execute(query)
+
+            rows = cursor.fetchmany(FETCH_SIZE)
+
+            while rows is not None and rows:
+                csv_writer.writerows(rows)
+                rows = cursor.fetchmany(FETCH_SIZE)
+
+def dump_chloride_acuity(cursor):
+    # read query template from file
+    query_template = Template(open("templates/sql/chloride-acuity.sql.template").read())
+
+    for site in DUMP_FILES_CHLORIDE_ACUITY:
+
+        # manually write header
+
+        # the query is hardcoded, so hardcode the schema
+        schema = ["CosmoTimestamp","Specific_Conductance","Temperature_Water","Water_Level"]
+
+        # dump table contents
+        with (open(TEMP_DIR + DUMP_FILES_CHLORIDE_ACUITY[site], 'w') as writer):
+            csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
+            csv_writer.writerow(schema)
+
+            query = query_template.substitute(
+                DB=NSSK_COSMO_DB,
+                SITE=site,
+                SPEC_CONDUCTANCE_THRESHOLD=SPECIFIC_CONDUCTANCE_THRESHOLD
+            )
+
+            # print("Query: %s" % query)
+            cursor.execute(query)
+
+            rows = cursor.fetchmany(FETCH_SIZE)
+
+            while rows is not None and rows:
+                csv_writer.writerows(rows)
+                rows = cursor.fetchmany(FETCH_SIZE)
 
 def zip_dump_files():
     # zip expected csv files in tmp/
 
-    for site in DUMP_FILES_CNV_RAINFALL:
-        zip_dump_file(DUMP_FILES_CNV_RAINFALL[site])
+    for site in DUMP_FILES_CNV_FLOWWORKS:
+        zip_dump_file(DUMP_FILES_CNV_FLOWWORKS[site])
 
-    for site in DUMP_FILES_DNV_WHITEWATER:
-        zip_dump_file(DUMP_FILES_DNV_WHITEWATER[site])
+    for site in DUMP_FILES_DNV_FLOWWORKS:
+        zip_dump_file(DUMP_FILES_DNV_FLOWWORKS[site])
 
     for site in DUMP_FILES_COSMO:
         zip_dump_file(DUMP_FILES_COSMO[site])
@@ -413,6 +527,14 @@ def zip_dump_files():
     for site in DUMP_FILES_RAINFALL_EVENT_DATA:
         zip_dump_file(DUMP_FILES_RAINFALL_EVENT_DATA[site])
 
+    for site in DUMP_FILES_CNV_HYDROMETRIC:
+        zip_dump_file(DUMP_FILES_CNV_HYDROMETRIC[site])
+
+    for site in DUMP_FILES_CHLORIDE_ACUITY:
+        zip_dump_file(DUMP_FILES_CHLORIDE_ACUITY[site])
+
+    for site in DUMP_FILES_WATERRANGERS:
+        zip_dump_file(DUMP_FILES_WATERRANGERS[site])
 
 # zip a dump file in its own archive at archive root level
 def zip_dump_file(dump_file):
@@ -425,10 +547,10 @@ def zip_dump_file(dump_file):
             zip_h.write(file, arcname="./%s" % dump_file)
 
         # remove source csv file
-        os.remove(file)
+        # actually keep this to offer both zipped and raw files
+        #os.remove(file)
     else:
         print("ERROR: encountered missing csv dump file when attempting compression: %s" % file)
-
 
 def write_html_file():
     html_template = Template(open("templates/index.html.template").read())
@@ -439,74 +561,86 @@ def write_html_file():
     ##########
     # cnv
 
-    cnv_rainfall_section_body = ""
-    for name in DUMP_FILES_CNV_RAINFALL:
-        zip_file = "%s.zip" % DUMP_FILES_CNV_RAINFALL[name]
+    cnv_flowworks_section_body = ""
+    for name in DUMP_FILES_CNV_FLOWWORKS:
+        csv_file = DUMP_FILES_CNV_FLOWWORKS[name]
+
+        zip_file = "%s.zip" % DUMP_FILES_CNV_FLOWWORKS[name]
 
         # file in the work dir (./tmp/file.csv.zip)
-        zip_file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
+        file_in_dist = "%s/%s" % (TEMP_DIR, csv_file)
 
         # http link to file deployed on webserver (./file.csv.zip)
         zip_file_link = "./%s" % zip_file
+        csv_file_link = "./%s" % csv_file
 
-        cnv_rainfall_section_body += resource_entry_template.substitute(
-            FILE=zip_file,
-            LINK=zip_file_link,
-            NAME=DUMP_FILES_CNV_RAINFALL[name],
-            DESC="CNV Rainfall Description",
-            SIZE="%.3f MB" % (os.path.getsize(zip_file_in_dist) / 1000000),
-            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(zip_file_in_dist)))
+        cnv_flowworks_section_body += resource_entry_template.substitute(
+            FILE=csv_file,
+            CSV_LINK=csv_file_link,
+            ZIP_LINK=zip_file_link,
+            NAME=DUMP_FILES_CNV_FLOWWORKS[name],
+            DESC="CNV Flowworks data",
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / 1000000),
+            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
         )
 
-    cnv_rainfall_section_block = section_block_template.substitute(
-        SECTION_BODY=cnv_rainfall_section_body
+    cnv_flowworks_section_block = section_block_template.substitute(
+        SECTION_BODY=cnv_flowworks_section_body
     )
 
     ##########
     # dnv whitewater
 
-    dnv_whitewater_section_body = ""
-    for name in DUMP_FILES_DNV_WHITEWATER:
-        zip_file = "%s.zip" % DUMP_FILES_DNV_WHITEWATER[name]
+    dnv_flowworks_section_body = ""
+    for name in DUMP_FILES_DNV_FLOWWORKS:
+        csv_file = DUMP_FILES_DNV_FLOWWORKS[name]
+
+        zip_file = "%s.zip" % DUMP_FILES_DNV_FLOWWORKS[name]
 
         # file in the work dir (./tmp/file.csv.zip)
-        zip_file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
+        file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
 
         # http link to file deployed on webserver (./file.csv.zip)
         zip_file_link = "./%s" % zip_file
+        csv_file_link = "./%s" % csv_file
 
-        dnv_whitewater_section_body += resource_entry_template.substitute(
-            FILE=zip_file,
-            LINK=zip_file_link,
-            NAME=DUMP_FILES_DNV_WHITEWATER[name],
-            DESC="DNV Whitewater Description",
-            SIZE="%.3f MB" % (os.path.getsize(zip_file_in_dist) / 1000000),
-            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(zip_file_in_dist)))
+        dnv_flowworks_section_body += resource_entry_template.substitute(
+            FILE=csv_file,
+            CSV_LINK=csv_file_link,
+            ZIP_LINK=zip_file_link,
+            NAME=DUMP_FILES_DNV_FLOWWORKS[name],
+            DESC="DNV Flowworks data",
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / 1000000),
+            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
         )
 
-    dnv_whitewater_section_block = section_block_template.substitute(
-        SECTION_BODY=dnv_whitewater_section_body
+    dnv_flowworks_section_block = section_block_template.substitute(
+        SECTION_BODY=dnv_flowworks_section_body
     )
 
     ##########
     # CoSMo
     cosmo_section_body = ""
     for name in DUMP_FILES_COSMO:
+        csv_file = DUMP_FILES_COSMO[name]
+
         zip_file = "%s.zip" % DUMP_FILES_COSMO[name]
 
         # file in the work dir (./tmp/file.csv.zip)
-        zip_file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
+        file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
 
         # http link to file deployed on webserver (./file.csv.zip)
         zip_file_link = "./%s" % zip_file
+        csv_file_link = "./%s" % csv_file
 
         cosmo_section_body += resource_entry_template.substitute(
-            FILE=zip_file,
-            LINK=zip_file_link,
+            FILE=csv_file,
+            CSV_LINK=csv_file_link,
+            ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_COSMO[name],
-            DESC="CoSMo Site %s Description" % name,
-            SIZE="%.3f MB" % (os.path.getsize(zip_file_in_dist) / 1000000),
-            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(zip_file_in_dist)))
+            DESC="CoSMo DFO data for site %s" % name,
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / 1000000),
+            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
         )
 
     cosmo_section_block = section_block_template.substitute(
@@ -518,21 +652,24 @@ def write_html_file():
 
     conductivity_rainfall_correlation_section_body = ""
     for name in DUMP_FILES_CONDUCTIVITY_RAINFALL_CORRELATION:
+        csv_file = DUMP_FILES_CONDUCTIVITY_RAINFALL_CORRELATION[name]
         zip_file = "%s.zip" % DUMP_FILES_CONDUCTIVITY_RAINFALL_CORRELATION[name]
 
         # file in the work dir (./tmp/file.csv.zip)
-        zip_file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
+        file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
 
         # http link to file deployed on webserver (./file.csv.zip)
         zip_file_link = "./%s" % zip_file
+        csv_file_link = "./%s" % csv_file
 
         conductivity_rainfall_correlation_section_body += resource_entry_template.substitute(
-            FILE=zip_file,
-            LINK=zip_file_link,
+            FILE=csv_file,
+            CSV_LINK=csv_file_link,
+            ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_CONDUCTIVITY_RAINFALL_CORRELATION[name],
-            DESC="C/R CoSMo Site %s Description" % name,
-            SIZE="%.3f MB" % (os.path.getsize(zip_file_in_dist) / 1000000),
-            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(zip_file_in_dist)))
+            DESC="C/R for CoSMo Site %s" % name,
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / 1000000),
+            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
         )
 
     conductivity_rainfall_correlation_section_block = section_block_template.substitute(
@@ -544,21 +681,24 @@ def write_html_file():
 
     rainfall_events_section_body = ""
     for name in DUMP_FILES_RAINFALL_EVENTS:
+        csv_file = DUMP_FILES_RAINFALL_EVENTS[name]
         zip_file = "%s.zip" % DUMP_FILES_RAINFALL_EVENTS[name]
 
         # file in the work dir (./tmp/file.csv.zip)
-        zip_file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
+        file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
 
         # http link to file deployed on webserver (./file.csv.zip)
         zip_file_link = "./%s" % zip_file
+        csv_file_link = "./%s" % csv_file
 
         rainfall_events_section_body += resource_entry_template.substitute(
-            FILE=zip_file,
-            LINK=zip_file_link,
+            FILE=csv_file,
+            CSV_LINK=csv_file_link,
+            ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_RAINFALL_EVENTS[name],
-            DESC="Rainfall Events for %s Description" % name,
-            SIZE="%.3f MB" % (os.path.getsize(zip_file_in_dist) / 1000000),
-            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(zip_file_in_dist)))
+            DESC="Rainfall Events for %s" % name,
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / 1000000),
+            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
         )
 
     rainfall_events_section_block = section_block_template.substitute(
@@ -569,41 +709,131 @@ def write_html_file():
 
     rainfall_event_data_section_body = ""
     for name in DUMP_FILES_RAINFALL_EVENT_DATA:
+        csv_file = DUMP_FILES_RAINFALL_EVENT_DATA[name]
         zip_file = "%s.zip" % DUMP_FILES_RAINFALL_EVENT_DATA[name]
 
         # file in the work dir (./tmp/file.csv.zip)
-        zip_file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
+        file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
 
         # http link to file deployed on webserver (./file.csv.zip)
         zip_file_link = "./%s" % zip_file
+        csv_file_link = "./%s" % csv_file
 
         rainfall_event_data_section_body += resource_entry_template.substitute(
-            FILE=zip_file,
-            LINK=zip_file_link,
+            FILE=csv_file,
+            CSV_LINK=csv_file_link,
+            ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_RAINFALL_EVENT_DATA[name],
-            DESC="Rainfall Event Data for %s Description" % name,
-            SIZE="%.3f MB" % (os.path.getsize(zip_file_in_dist) / 1000000),
-            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(zip_file_in_dist)))
+            DESC="Rainfall Event Data for site %s" % name,
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / 1000000),
+            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
         )
 
     rainfall_event_data_section_block = section_block_template.substitute(
         SECTION_BODY=rainfall_event_data_section_body
     )
 
+    ##########
+    # CNV Hydrometric
+
+    cnv_hydrometric_section_body = ""
+    for name in DUMP_FILES_CNV_HYDROMETRIC:
+        csv_file = DUMP_FILES_CNV_HYDROMETRIC[name]
+        zip_file = "%s.zip" % DUMP_FILES_CNV_HYDROMETRIC[name]
+
+        # file in the work dir (./tmp/file.csv.zip)
+        file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
+
+        # http link to file deployed on webserver (./file.csv.zip)
+        zip_file_link = "./%s" % zip_file
+        csv_file_link = "./%s" % csv_file
+
+        cnv_hydrometric_section_body += resource_entry_template.substitute(
+            FILE=csv_file,
+            CSV_LINK=csv_file_link,
+            ZIP_LINK=zip_file_link,
+            NAME=DUMP_FILES_CNV_HYDROMETRIC[name],
+            DESC="CNV Hydrometric Data for site %s" % name,
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / 1000000),
+            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
+        )
+
+    cnv_hydrometric_section_block = section_block_template.substitute(
+        SECTION_BODY=cnv_hydrometric_section_body
+    )
+
+    ##########
+    # chloride acuity
+    chloride_acuity_section_body = ""
+    for name in DUMP_FILES_CHLORIDE_ACUITY:
+        csv_file = DUMP_FILES_CHLORIDE_ACUITY[name]
+        zip_file = "%s.zip" % DUMP_FILES_CHLORIDE_ACUITY[name]
+
+        # file in the work dir (./tmp/file.csv.zip)
+        file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
+
+        # http link to file deployed on webserver (./file.csv.zip)
+        zip_file_link = "./%s" % zip_file
+        csv_file_link = "./%s" % csv_file
+
+        chloride_acuity_section_body += resource_entry_template.substitute(
+            FILE=csv_file,
+            CSV_LINK=csv_file_link,
+            ZIP_LINK=zip_file_link,
+            NAME=DUMP_FILES_CHLORIDE_ACUITY[name],
+            DESC="Chloride Acuity data for site %s" % name,
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / 1000000),
+            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
+        )
+
+    chloride_acuity_section_body = section_block_template.substitute(
+        SECTION_BODY=chloride_acuity_section_body
+    )
+
+    ##########
+    # Waterrangers
+    waterrangers_section_body = ""
+    for name in DUMP_FILES_WATERRANGERS:
+        csv_file = DUMP_FILES_WATERRANGERS[name]
+        zip_file = "%s.zip" % DUMP_FILES_WATERRANGERS[name]
+
+        # file in the work dir (./tmp/file.csv.zip)
+        file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
+
+        # http link to file deployed on webserver (./file.csv.zip)
+        zip_file_link = "./%s" % zip_file
+        csv_file_link = "./%s" % csv_file
+
+        waterrangers_section_body += resource_entry_template.substitute(
+            FILE=csv_file,
+            CSV_LINK=csv_file_link,
+            ZIP_LINK=zip_file_link,
+            NAME=DUMP_FILES_WATERRANGERS[name],
+            DESC="Waterrangers data for site %s" % name,
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / 1000000),
+            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
+        )
+
+    waterrangers_section_block = section_block_template.substitute(
+        SECTION_BODY=waterrangers_section_body
+    )
+
     ##############################
     dist_html_page = html_template.substitute(
-        CNV_RAINFALL_BLOCK=cnv_rainfall_section_block,
-        DNV_WHITEWATER_BLOCK=dnv_whitewater_section_block,
+        CNV_FLOWWORKS_BLOCK=cnv_flowworks_section_block,
+        DNV_FLOWWORKS_BLOCK=dnv_flowworks_section_block,
         COSMO_BLOCK=cosmo_section_block,
         CONDUCTIVITY_RAINFALL_CORRELATION_BLOCK=conductivity_rainfall_correlation_section_block,
         RAINFALL_EVENTS_BLOCK=rainfall_events_section_block,
-        RAINFALL_EVENT_DATA_BLOCK=rainfall_event_data_section_block
+        RAINFALL_EVENT_DATA_BLOCK=rainfall_event_data_section_block,
+        CNV_HYDROMETRIC_BLOCK=cnv_hydrometric_section_block,
+        CHLORIDE_ACUITY_BLOCK=chloride_acuity_section_body,
+        WATERRANGERS_BLOCK=waterrangers_section_block
     )
 
     # write everything to file
     with open("%s%s" % (TEMP_DIR, DUMP_HTML_FILE), 'w') as writer:
         writer.write(dist_html_page)
-
 
 # create the dist from intermediate resources. this file gets deployed on some service medium
 def create_dist():
@@ -611,6 +841,7 @@ def create_dist():
 
     # create a zip file at "./" from:
     # zip files in tmp
+    # csv files in tmp
     # tmp/index.html
 
     # copy resources from source dirs to work dir
@@ -625,13 +856,12 @@ def create_dist():
     for favicon_file in favicon_files:
         shutil.copy2("%s/%s" % (FAVICON_DIR, favicon_file), TEMP_DIR)
 
-    # assemble zip file
+    # assemble zip file from tmp dir
     with ZipFile("./%s" % DIST_FILE, 'w', zipfile.ZIP_DEFLATED) as zip_h:
         for root, dirs, files in os.walk(TEMP_DIR):
             for file in files:
                 print("Adding file to distribution: %s" % file)
                 zip_h.write("%s/%s" % (TEMP_DIR, file), arcname="./%s" % file)
-
 
 def cleanup():
     print("Cleaning up temporary resources")

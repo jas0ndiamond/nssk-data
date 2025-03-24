@@ -40,14 +40,14 @@ body {
 NSSK Data Source Aggregation, Storage, and Analysis
 
 <hr>
-<h3>CNV Rainfall</h3>
-City of North Vancouver rainfall data from Flowworks<br>
-$CNV_RAINFALL_BLOCK
+<h3>CNV Flowworks</h3>
+City of North Vancouver data from Flowworks<br>
+$CNV_FLOWWORKS_BLOCK
 
 <hr>
-<h3>DNV Whitewater</h3>
-District of North Vancouver water flow data from Flowworks<br>
-$DNV_WHITEWATER_BLOCK
+<h3>DNV Flowworks</h3>
+District of North Vancouver data from Flowworks<br>
+$DNV_FLOWWORKS_BLOCK
 
 <hr>
 <h3>CoSMo</h3>
@@ -70,10 +70,26 @@ Rainfall Event Data occurring in CNV/DNV area<br>
 $RAINFALL_EVENT_DATA_BLOCK
 
 <hr>
+<h3>CNV Hydrometric</h3>
+CNV Hydrometric Data<br>
+$CNV_HYDROMETRIC_BLOCK
 
-North Shore Streamkeepers 2024<br>
+<hr>
+<h3>Chloride Acuity</h3>
+Chloride Acuity for CoSMo sites<br>
+$CHLORIDE_ACUITY_BLOCK
+
+<hr>
+<h3>Waterrangers</h3>
+Waterrangers data for CNV area<br>
+$WATERRANGERS_BLOCK
+
+<hr>
+
+North Shore Streamkeepers 2025<br>
 Report problems, requests, suggestions, and questions to Jason<br>
 <a href="https://github.com/jas0ndiamond/nssk-data">nssk-data Project</a><br>
+<a href="https://github.com/jas0ndiamond/nssk-database">nssk-database Project</a><br>
 <a href="https://www.nssk.ca">NSSK</a>
 
 </body>

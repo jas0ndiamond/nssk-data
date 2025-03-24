@@ -1,5 +1,5 @@
 select MeasurementTimestamp,Rainfall
-from NSSK_CNV_RAINFALL.CNV
+from NSSK_CNV_FLOWWORKS.CNVRain
 where MeasurementTimestamp > "$SEARCH_START" and Rainfall > 0
 ORDER by MeasurementTimestamp
 ASC

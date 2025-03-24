@@ -1,0 +1,2 @@
+class ConfigException(BaseException):
+    pass
