@@ -181,16 +181,16 @@ src/*/*.sql
 # test output files
 output
 
-#dnv-whitewater*.json
-#cnv-rainfall.json
+#dnv-flowworks*.json
+#cnv-flowworks.json
 
 # dist resources
-src/distribution/conf/dist.json
+src/distribution/conf/*.json
 src/distribution/tmp/
 src/distribution/nssk-data-dist.zip
 
 # updater config file
-src/update-datasets/conf/config.json
+src/update-datasets/conf/*.json
 
 # notes
 todo.txt
