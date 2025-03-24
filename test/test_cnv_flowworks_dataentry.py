@@ -8,10 +8,10 @@ path_root = Path(__file__).parents[1]
 sys.path.append(str(path_root))
 
 # depends on adding src to sys.path
-from src.cnv_rainfall.CNVRainfallDataEntry import CNVRainfallDataEntry
+from src.cnv_flowworks.CNVFlowworksDataEntry import CNVFlowworksDataEntry
 
 # run with:
-# ../venv/bin/python3 -m unittest test_cnv_rainfall_dataentry.py
+# ../venv/bin/python3 -m unittest test_cnv_flowworks_dataentry.py
 # ../venv/bin/python3 -m unittest
 
 class CNVRainfallTests(unittest.TestCase):
@@ -29,7 +29,7 @@ class CNVRainfallTests(unittest.TestCase):
 
         self.assertIsNotNone(csv_row)
 
-        data_entry = CNVRainfallDataEntry(csv_row)
+        data_entry = CNVFlowworksDataEntry(csv_row)
 
         self.assertEqual("2022-02-27 00:00:00", data_entry.get("yyyy/MM/dd HH:mm:ss"))
 
@@ -47,7 +47,7 @@ class CNVRainfallTests(unittest.TestCase):
 
         self.assertIsNotNone(csv_row)
 
-        data_entry = CNVRainfallDataEntry(csv_row)
+        data_entry = CNVFlowworksDataEntry(csv_row)
 
         self.assertEqual("2022-02-27 00:00:00", data_entry.get("yyyy/MM/dd HH:mm:ss"))
 
