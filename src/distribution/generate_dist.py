@@ -30,6 +30,8 @@ FETCH_SIZE = 5000
 
 SPECIFIC_CONDUCTANCE_THRESHOLD = 500
 
+BYTES_IN_MB = 1000000
+
 ########################
 # database and tables
 
@@ -71,7 +73,7 @@ FAVICON_DIR = "./res/favicon/"
 # TODO move all this to a json file
 
 DUMP_FILES_CNV_FLOWWORKS = {
-    "CNVRain": "nssk_csv_flowworks.csv"
+    "CNVRain": "nssk_cnv_flowworks.csv"
 }
 
 DUMP_FILES_DNV_FLOWWORKS = {
@@ -567,10 +569,10 @@ def write_html_file():
 
         zip_file = "%s.zip" % DUMP_FILES_CNV_FLOWWORKS[name]
 
-        # file in the work dir (./tmp/file.csv.zip)
+        # http links to files deployed on webserver (./file.csv, ./file.csv.zip)
         file_in_dist = "%s/%s" % (TEMP_DIR, csv_file)
 
-        # http link to file deployed on webserver (./file.csv.zip)
+        # http link to file deployed on webserver (./file.csv)
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
@@ -580,7 +582,7 @@ def write_html_file():
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_CNV_FLOWWORKS[name],
             DESC="CNV Flowworks data",
-            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / 1000000),
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / BYTES_IN_MB),
             CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
         )
 
@@ -597,10 +599,10 @@ def write_html_file():
 
         zip_file = "%s.zip" % DUMP_FILES_DNV_FLOWWORKS[name]
 
-        # file in the work dir (./tmp/file.csv.zip)
-        file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
+        # file in the work dir (./tmp/file.csv)
+        file_in_dist = "%s/%s" % (TEMP_DIR, csv_file)
 
-        # http link to file deployed on webserver (./file.csv.zip)
+        # http links to files deployed on webserver (./file.csv, ./file.csv.zip)
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
@@ -610,7 +612,7 @@ def write_html_file():
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_DNV_FLOWWORKS[name],
             DESC="DNV Flowworks data",
-            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / 1000000),
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / BYTES_IN_MB),
             CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
         )
 
@@ -626,10 +628,10 @@ def write_html_file():
 
         zip_file = "%s.zip" % DUMP_FILES_COSMO[name]
 
-        # file in the work dir (./tmp/file.csv.zip)
-        file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
+        # file in the work dir (./tmp/file.csv)
+        file_in_dist = "%s/%s" % (TEMP_DIR, csv_file)
 
-        # http link to file deployed on webserver (./file.csv.zip)
+        # http links to files deployed on webserver (./file.csv, ./file.csv.zip)
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
@@ -639,7 +641,7 @@ def write_html_file():
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_COSMO[name],
             DESC="CoSMo DFO data for site %s" % name,
-            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / 1000000),
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / BYTES_IN_MB),
             CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
         )
 
@@ -655,10 +657,10 @@ def write_html_file():
         csv_file = DUMP_FILES_CONDUCTIVITY_RAINFALL_CORRELATION[name]
         zip_file = "%s.zip" % DUMP_FILES_CONDUCTIVITY_RAINFALL_CORRELATION[name]
 
-        # file in the work dir (./tmp/file.csv.zip)
-        file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
+        # file in the work dir (./tmp/file.csv)
+        file_in_dist = "%s/%s" % (TEMP_DIR, csv_file)
 
-        # http link to file deployed on webserver (./file.csv.zip)
+        # http links to files deployed on webserver (./file.csv, ./file.csv.zip)
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
@@ -668,7 +670,7 @@ def write_html_file():
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_CONDUCTIVITY_RAINFALL_CORRELATION[name],
             DESC="C/R for CoSMo Site %s" % name,
-            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / 1000000),
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / BYTES_IN_MB),
             CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
         )
 
@@ -684,10 +686,10 @@ def write_html_file():
         csv_file = DUMP_FILES_RAINFALL_EVENTS[name]
         zip_file = "%s.zip" % DUMP_FILES_RAINFALL_EVENTS[name]
 
-        # file in the work dir (./tmp/file.csv.zip)
-        file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
+        # file in the work dir (./tmp/file.csv)
+        file_in_dist = "%s/%s" % (TEMP_DIR, csv_file)
 
-        # http link to file deployed on webserver (./file.csv.zip)
+        # http links to files deployed on webserver (./file.csv, ./file.csv.zip)
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
@@ -697,7 +699,7 @@ def write_html_file():
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_RAINFALL_EVENTS[name],
             DESC="Rainfall Events for %s" % name,
-            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / 1000000),
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / BYTES_IN_MB),
             CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
         )
 
@@ -712,10 +714,10 @@ def write_html_file():
         csv_file = DUMP_FILES_RAINFALL_EVENT_DATA[name]
         zip_file = "%s.zip" % DUMP_FILES_RAINFALL_EVENT_DATA[name]
 
-        # file in the work dir (./tmp/file.csv.zip)
-        file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
+        # file in the work dir (./tmp/file.csv)
+        file_in_dist = "%s/%s" % (TEMP_DIR, csv_file)
 
-        # http link to file deployed on webserver (./file.csv.zip)
+        # http links to files deployed on webserver (./file.csv, ./file.csv.zip)
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
@@ -725,7 +727,7 @@ def write_html_file():
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_RAINFALL_EVENT_DATA[name],
             DESC="Rainfall Event Data for site %s" % name,
-            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / 1000000),
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / BYTES_IN_MB),
             CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
         )
 
@@ -741,10 +743,10 @@ def write_html_file():
         csv_file = DUMP_FILES_CNV_HYDROMETRIC[name]
         zip_file = "%s.zip" % DUMP_FILES_CNV_HYDROMETRIC[name]
 
-        # file in the work dir (./tmp/file.csv.zip)
-        file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
+        # file in the work dir (./tmp/file.csv)
+        file_in_dist = "%s/%s" % (TEMP_DIR, csv_file)
 
-        # http link to file deployed on webserver (./file.csv.zip)
+        # http links to files deployed on webserver (./file.csv, ./file.csv.zip)
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
@@ -754,7 +756,7 @@ def write_html_file():
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_CNV_HYDROMETRIC[name],
             DESC="CNV Hydrometric Data for site %s" % name,
-            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / 1000000),
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / BYTES_IN_MB),
             CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
         )
 
@@ -769,10 +771,10 @@ def write_html_file():
         csv_file = DUMP_FILES_CHLORIDE_ACUITY[name]
         zip_file = "%s.zip" % DUMP_FILES_CHLORIDE_ACUITY[name]
 
-        # file in the work dir (./tmp/file.csv.zip)
-        file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
+        # file in the work dir (./tmp/file.csv)
+        file_in_dist = "%s/%s" % (TEMP_DIR, csv_file)
 
-        # http link to file deployed on webserver (./file.csv.zip)
+        # http links to files deployed on webserver (./file.csv, ./file.csv.zip)
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
@@ -782,7 +784,7 @@ def write_html_file():
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_CHLORIDE_ACUITY[name],
             DESC="Chloride Acuity data for site %s" % name,
-            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / 1000000),
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / BYTES_IN_MB),
             CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
         )
 
@@ -797,10 +799,10 @@ def write_html_file():
         csv_file = DUMP_FILES_WATERRANGERS[name]
         zip_file = "%s.zip" % DUMP_FILES_WATERRANGERS[name]
 
-        # file in the work dir (./tmp/file.csv.zip)
-        file_in_dist = "%s/%s" % (TEMP_DIR, zip_file)
+        # file in the work dir (./tmp/file.csv)
+        file_in_dist = "%s/%s" % (TEMP_DIR, csv_file)
 
-        # http link to file deployed on webserver (./file.csv.zip)
+        # http links to files deployed on webserver (./file.csv, ./file.csv.zip)
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
@@ -810,7 +812,7 @@ def write_html_file():
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_WATERRANGERS[name],
             DESC="Waterrangers data for site %s" % name,
-            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / 1000000),
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / BYTES_IN_MB),
             CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
         )
 
