@@ -366,7 +366,7 @@ def compile_rainfall_events(db_config_filename, db_importer):
     # search for wet with no results => done looking for events
 
     # We can define a rainfall event as the first non-zero rainfall measurement
-    # until the next 48 hour period of zero rainfall.
+    # until the next 48-hour period of zero rainfall.
     #
     # this can mean that rain starts and stops repeatedly, and it's all in one rain event
 
