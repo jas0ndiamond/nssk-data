@@ -281,7 +281,6 @@ def get_measurement_date_windows(cursor, sensor_name):
 
 # run the correlation for a sensor site. NSSK_COSMO is the reference data source with conductivity measurements.
 # search for matching rainfall measurements within a time window of a conductivity measurement.
-# sensor site table should be manually dropped before running (or TODO: automatically?)
 def run_correlation(sensor_name, db_config_filename, db_importer):
     config = DBConfigFactory.build(db_config_filename)
 
@@ -294,7 +293,7 @@ def run_correlation(sensor_name, db_config_filename, db_importer):
                 password=config[DBConfig.CONFIG_PASS],
                 database=config[DBConfig.CONFIG_DBASE],
         ) as connection):
-            config = None
+            config[DBConfig.CONFIG_PASS] = None
 
             try:
                 with connection.cursor() as cursor:
