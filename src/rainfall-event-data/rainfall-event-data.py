@@ -95,10 +95,8 @@ DNV_FLOWWORKS_DATA_WINDOW_TEMPLATE = Template(
 CNV_FLOWWORKS_TEMPLATE = Template(
     open("../rainfall-event-data/sql/get-cnv-data-for-rainfall-event.sql.template").read())
 
-# TODO dont read this every time
 COSMO_DATA_WINDOW_TEMPLATE = Template(
     open("../rainfall-event-data/sql/get-cosmo-data-for-rainfall-event.sql.template").read())
-
 
 ###############
 

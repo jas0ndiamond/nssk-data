@@ -1,29 +1,23 @@
-# CoSMo/Solinst Importer
+# Waterrangers Importer
 
-Imports from Solinst Instrument raw CSV data dumps into a MySQL database
+Imports from NSSK Waterrangers data dumps into a MySQL database
 
 ---
 ## Setup
 
 1. Create a database config file from the template in nssk-data/conf for the database that will house the imported data.
-2. Acquire the data dump from whoever has access to the raw data dumps.
-3. Remove any preamble to the file so that the CSV schema is the first line.
 
 ---
 ## Run
 
-`cd src/cosmo-solinst`
-
-`../../venv/bin/python3 cosmo-solinst-import.py -cfg ../../conf/cosmo.json [SITE] [DUMP_FILE]`
+1. Change to the scripts directory `cd nssk-data/src/waterrangers/scripts`
+2. Run the retrieval script `./get.sh`
+3. Run the import wrapper script `./import-all.sh`
 
 ---
 ## Notes
 
-Typically, this raw data is collected locally and handed off to DFO PSEC Community Stream Monitoring where it 
-eventually appears in the CoSMo dataset.
-
-Logs output to `cosmo-solisnt-import.log`
+Logs output to `waterrangers.log`
 
 The database will enforce uniqueness constraints. Inserts that fail uniqueness constraints will be dumped 
 to a `duplicates_*.sql` file
-
