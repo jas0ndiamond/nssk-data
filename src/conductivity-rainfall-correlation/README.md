@@ -17,5 +17,6 @@
 ---
 ## Notes
 * Correlation time window for measurements is 5 minutes. 
+* Multiple CoSMo measurements may map to the same rainfall measurement.
 * There are gaps in sensor readings, which will create gaps in correlation.
 * CoSMo sites WAGG01 and WAGG03 only for now.
