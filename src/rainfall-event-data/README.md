@@ -1,4 +1,4 @@
-# Rainfall Events Data
+# Rainfall Event Data
 
 ---
 ## Description
@@ -15,7 +15,7 @@
 ---
 ## Run
 `cd src/rainfall-events-data`
-`../../venv/bin/python3 rainfall-events-data.py -cfg ../../conf/rainfall-events.json`
+`../../venv/bin/python3 rainfall-event-data.py -cfg ../../conf/rainfall-events.json`
 
 ---
 ## Notes
