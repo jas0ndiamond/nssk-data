@@ -290,8 +290,7 @@ def run_correlation(sensor_name, db_config_filename, db_importer):
                 host=config[DBConfig.CONFIG_HOST],
                 port=int(config[DBConfig.CONFIG_PORT]),
                 user=config[DBConfig.CONFIG_USER],
-                password=config[DBConfig.CONFIG_PASS],
-                database=config[DBConfig.CONFIG_DBASE],
+                password=config[DBConfig.CONFIG_PASS]
         ) as connection):
             config[DBConfig.CONFIG_PASS] = None
 
