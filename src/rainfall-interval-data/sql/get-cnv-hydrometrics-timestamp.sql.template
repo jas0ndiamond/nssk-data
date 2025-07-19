@@ -1,0 +1,8 @@
+SELECT
+	NSSK_CNV_HYDROMETRIC.$SITE.MeasurementTimestamp as CNVHydrometricTimestamp,
+  	NSSK_CNV_HYDROMETRIC.$SITE.Rainfall as Rainfall
+FROM NSSK_CNV_HYDROMETRIC.$SITE
+WHERE
+    CNVHydrometricTimestamp >= "$CNV_HYDROMETRIC_START_DATETIME" AND CNVHydrometricTimestamp < "$CNV_HYDROMETRIC_END_DATETIME"
+ORDER BY
+  	CNVHydrometricTimestamp ASC;

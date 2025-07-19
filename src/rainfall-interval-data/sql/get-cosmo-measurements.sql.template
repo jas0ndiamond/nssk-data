@@ -1,0 +1,12 @@
+SELECT
+	CAST(CONCAT_WS(' ', NSSK_COSMO.$SITE.ActivityStartDate, NSSK_COSMO.$SITE.ActivityStartTime) as DATETIME) as CosmoTimestamp,
+	MAX(CASE WHEN NSSK_COSMO.$SITE.CharacteristicName = 'Conductivity' THEN NSSK_COSMO.$SITE.ResultValue END) as Conductivity,
+  	MAX(CASE WHEN NSSK_COSMO.$SITE.CharacteristicName = 'Temperature water' THEN NSSK_COSMO.$SITE.ResultValue END) as TemperatureWater
+FROM $DB.$SITE.
+WHERE
+	(NSSK_COSMO.$SITE.ActivityStartDate BETWEEN '$COSMO_START_DATE' AND '$COSMO_END_DATE') AND
+	(NSSK_COSMO.$SITE.ActivityStartTime >= '00:00:00' AND  NSSK_COSMO.$SITE.ActivityStartTime < '23:59:59')
+GROUP BY
+  	CosmoTimestamp
+ORDER BY
+  	CosmoTimestamp ASC;

@@ -1,0 +1,8 @@
+SELECT
+	NSSK_CNV_FLOWWORKS.$SITE.MeasurementTimestamp as CNVFlowworksTimestamp,
+  	NSSK_CNV_FLOWWORKS.$SITE.Rainfall as Rainfall
+FROM NSSK_CNV_FLOWWORKS.$SITE
+WHERE
+    CNVFlowworksTimestamp >= "$CNV_FLOWWORKS_START_DATETIME" AND CNVFlowworksTimestamp < "$CNV_FLOWWORKS_END_DATETIME"
+ORDER BY
+  	CNVFlowworksTimestamp ASC;
