@@ -1,5 +1,5 @@
 SELECT CAST(CONCAT_WS(' ', $DB.$SITE.ActivityStartDate, $DB.$SITE.ActivityStartTime) as DATETIME) as "COSMO_TIMESTAMP"
 from $DB.$SITE
-where $DB.$SITE.CharacteristicName = "Conductivity"
+where $DB.$SITE.CharacteristicName = "Conductivity" or $DB.$SITE.CharacteristicName = "Temperature water" or $DB.$SITE.CharacteristicName = "Water level (probe)"
 order by COSMO_TIMESTAMP $ORDER
 LIMIT 1;

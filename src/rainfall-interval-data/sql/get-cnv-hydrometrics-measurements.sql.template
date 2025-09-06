@@ -1,8 +1,0 @@
-SELECT
-	NSSK_CNV_HYDROMETRIC.$SITE.MeasurementTimeStamp as CNVHydrometricTimestamp,
-  	NSSK_CNV_HYDROMETRIC.$SITE.RevisedFinalStage as RevisedFinalStage
-FROM NSSK_CNV_HYDROMETRIC.$SITE
-WHERE
-    CNVHydrometricTimestamp >= "$CNV_HYDROMETRIC_START_DATETIME" AND CNVHydrometricTimestamp < "$CNV_HYDROMETRIC_END_DATETIME"
-ORDER BY
-  	CNVHydrometricTimestamp ASC;

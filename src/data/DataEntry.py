@@ -62,10 +62,11 @@ class DataEntry:
         return self.entry_data[field_name]
 
     def is_defined(self, field_name):
-        return self.entry_data[field_name] is not None
+        return field_name in self.entry_data
 
     def set(self, field_name, value):
-        # TODO require field name to be present?
+        # TODO require field name to be present? need to check how this is used
+        #if self.is_defined(field_name):
         self.entry_data[field_name] = value
 
     def _get_entry_data(self):
@@ -78,4 +79,7 @@ class DataEntry:
     #     pass
 
     def to_s(self):
+        return pprint.pformat(self.entry_data)
+
+    def pprint(self):
         pprint.pprint(self.entry_data)
