@@ -428,6 +428,7 @@ def run_correlation(sensor_name, db_config_filename, db_importer):
                         # query should be date_field >= start_date and date_field < end_date
                         cosmo_date_i = cosmo_date_i + datetime.timedelta(seconds=CORRELATION_INCREMENT)
 
+                # TODO: this should be indented one more level
                 correlation_processing_elapsed_time = (timeit.default_timer() - correlation_processing_start_time)
                 log_msg = "Completed correlation Processing in %.3f sec" % correlation_processing_elapsed_time
                 print("\n%s" % log_msg, flush=True)
