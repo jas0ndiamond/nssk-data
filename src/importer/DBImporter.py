@@ -66,7 +66,13 @@ class DBImporter:
 
         # check if a schema or schema mapping is defined
         if self.schema is None or len(self.schema) <= 0:
-            raise "Database schema must be defined"
+            raise Exception("Database schema must be defined for entry")
+
+        # where the entry will go in the database
+        entry_dest = entry.get_db_destination()
+
+        if entry_dest is None:
+            raise Exception("Database destination table must be defined for entry")
 
         statement = "INSERT INTO"
 
@@ -124,7 +130,7 @@ class DBImporter:
         # entry fields
 
         # get the table to store the entry
-        table = entry.get_db_destination()
+        table = entry_dest
 
         statement += (" " + table + " " + fields_segment + values_segment)
 
