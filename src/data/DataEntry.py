@@ -26,6 +26,7 @@ class DataEntry:
         # TODO: make static
         scrub_pattern = re.compile(r'[\[\]\'\"\$\#\@\!\{\}\,\|]')
 
+        # set internal state from entry_obj
         for field in entry_obj:
             if entry_obj[field] is None:
                 # if it's a None, rely on subclass to validate if None values are acceptable for field
