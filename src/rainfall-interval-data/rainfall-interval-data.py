@@ -8,8 +8,6 @@ import argparse
 import logging
 import timeit
 
-from src.exception.DataValidationException import DataValidationException
-
 path_root = Path(__file__).parents[2]
 sys.path.append(str(path_root))
 
@@ -17,15 +15,19 @@ from RainfallIntervalDataEntry import RainfallIntervalDataEntry
 from src.importer.DBImporter import DBImporter
 from src.importer.DBConfig import DBConfig
 from src.importer.DBConfigFactory import DBConfigFactory
+from src.exception.DataValidationException import DataValidationException
+from src.exception.PrecheckFailedException import PrecheckFailedException
 
-logFile = "interval-data.log"
+logFile = "rainfall-interval-data.log"
 
 logging.basicConfig(filename=logFile, format='%(asctime)s [%(levelname)s] -- [%(name)s]-[%(funcName)s]: %(message)s')
 logger = logging.getLogger(__name__)
 
 logger.setLevel(logging.DEBUG)
-logging.getLogger("IntervalDataDataEntry").setLevel(logging.INFO)
+logging.getLogger("RainfallIntervalDataEntry").setLevel(logging.INFO)
 logging.getLogger("DBImporter").setLevel(logging.INFO)
+
+TRACE_LOGGING = True
 
 # time window to search for a corresponding conductivity value
 # +/- 2 minutes. in seconds
@@ -85,10 +87,11 @@ SCHEMA = [
     RainfallIntervalDataEntry.CNV_HYDROMETRIC_TIMESTAMP_FIELD,
     RainfallIntervalDataEntry.CNV_HYDROMETRIC_REVISED_STAGE_FIELD,
 
-    RainfallIntervalDataEntry.CNV_FLOWWORKS_TIMESTAMP_FIELD,
-    RainfallIntervalDataEntry.CNV_FLOWWORKS_RAINFALL_START_FIELD,
-    RainfallIntervalDataEntry.CNV_FLOWWORKS_RAINFALL_END_FIELD,
+    RainfallIntervalDataEntry.CNV_FLOWWORKS_RAINFALL_START_TIMESTAMP_FIELD,
+    RainfallIntervalDataEntry.CNV_FLOWWORKS_RAINFALL_END_TIMESTAMP_FIELD,
     RainfallIntervalDataEntry.CNV_FLOWWORKS_RAINFALL_AMT_FIELD,
+    RainfallIntervalDataEntry.CNV_FLOWWORKS_BARO_PRESSURE_FIELD,
+    RainfallIntervalDataEntry.CNV_FLOWWORKS_AIR_TEMPERATURE_FIELD,
 ]
 
 
@@ -123,8 +126,7 @@ def precheck(conf_file):
                     cursor.fetchall()
 
                     if cursor.rowcount != 1:
-                        # TODO: custom exception
-                        raise Exception("Could not find %s target database" % target_db)
+                        raise PrecheckFailedException("Could not find %s target database" % target_db)
                     else:
                         logger.debug("Found target database %s" % target_db)
 
@@ -134,8 +136,7 @@ def precheck(conf_file):
                     cursor.fetchall()
 
                     if cursor.rowcount != 1:
-                        # TODO: custom exception
-                        raise Exception("Could not find source database %s" % SOURCE_DB_NSSK_COSMO)
+                        raise PrecheckFailedException("Could not find source database %s" % SOURCE_DB_NSSK_COSMO)
                     else:
                         logger.debug("Found source database %s" % SOURCE_DB_NSSK_COSMO)
 
@@ -145,13 +146,11 @@ def precheck(conf_file):
                     cursor.fetchall()
 
                     if cursor.rowcount != 1:
-                        # TODO: custom exception
-                        raise Exception("Could not find source database %s" % SOURCE_DB_CNV_FLOWWORKS)
+                        raise PrecheckFailedException("Could not find source database %s" % SOURCE_DB_CNV_FLOWWORKS)
                     else:
                         logger.debug("Found source database %s" % SOURCE_DB_CNV_FLOWWORKS)
 
                     # check that a table for each sensor exists
-
                     for sensor in SENSORS:
                         logger.debug("Precheck Sensor %s" % sensor)
 
@@ -159,12 +158,21 @@ def precheck(conf_file):
                         cursor.execute("SHOW TABLES LIKE '%s';" % sensor)
                         cursor.fetchall()
                         if cursor.rowcount != 1:
-                            # TODO: custom exception
-                            raise Exception("Could not find sensor table %s in target database" % sensor)
+                            raise PrecheckFailedException("Could not find sensor table %s in target database" % sensor)
                         else:
                             logger.debug("Found Sensor Table %s" % sensor)
 
+                        # check that destination table is empty
+                        cursor.reset()
+                        cursor.execute("SELECT EXISTS(SELECT 1 FROM %s.%s LIMIT 1) AS is_not_empty;" % (target_db, sensor))
+                        if cursor.fetchone()[0]:
+                            # TODO: we have write access to insert, should also be able to drop. for now just throw an exception
+                            raise PrecheckFailedException("Destination table %s.%s is not empty." % (target_db, sensor))
+                        else:
+                            logger.debug("Destination table %s.%s is empty. Proceeding." % (target_db, sensor))
+
                     # target database validated. cache database name, so we can reference when running the correlation
+                    # TODO: necessary?
                     global TARGET_DATABASE
                     TARGET_DATABASE = target_db
 
@@ -383,6 +391,9 @@ def collect_cosmo_and_cnvhydro_data(cosmo_site_name, cnv_hydro_site_name, db_con
     # is a list of RainfallIntervalDataEntry since who knows what timestamps will be available
     final_measurements = []
 
+    # interval data localized to cosmo sites
+    target_destination_db = cosmo_site_name
+
     config = DBConfigFactory.build(db_config_filename)
 
     # TODO: check exception block messages and flow
@@ -457,6 +468,10 @@ def collect_cosmo_and_cnvhydro_data(cosmo_site_name, cnv_hydro_site_name, db_con
 
                         cursor.execute(cosmo_block_measurements_sql)
 
+                        # TODO: conductivity coming back None sometimes.
+                        # throw out measurement entirely?
+                        # throw out only if temperature water not defined?
+                        # ==> handle Nones robustly with both.
                         row = cursor.fetchone()
                         while row is not None:
                             # query should return schema CosmoTimestamp, Conductivity, TemperatureWater
@@ -469,7 +484,7 @@ def collect_cosmo_and_cnvhydro_data(cosmo_site_name, cnv_hydro_site_name, db_con
                             try:
                                 new_entry = RainfallIntervalDataEntry(data_entry)
 
-                                new_entry.set_db_destination(cosmo_site_name)
+                                new_entry.set_db_destination(target_destination_db)
 
                                 cosmo_block_measurements[measurement_timestamp] = new_entry
                             except DataValidationException as e:
@@ -507,7 +522,7 @@ def collect_cosmo_and_cnvhydro_data(cosmo_site_name, cnv_hydro_site_name, db_con
 
                                 # use the cnv hydro site name associated with the cosmo site name
                                 # only one cnv hydro site now so hardcode it
-                                new_entry.set_db_destination(cnv_hydro_site_name)
+                                new_entry.set_db_destination(target_destination_db)
 
                                 cnv_hydrometric_block_measurements[measurement_timestamp] = new_entry
                             except DataValidationException as e:
@@ -562,13 +577,17 @@ def collect_cosmo_and_cnvhydro_data(cosmo_site_name, cnv_hydro_site_name, db_con
 
                                     # create new composite measurement
                                     # any cosmo measurement could be missing, or any set that has multiple measurements
-                                    correlated_measurements.append(RainfallIntervalDataEntry({
+                                    composite_measurement = RainfallIntervalDataEntry({
                                         RainfallIntervalDataEntry.COSMO_TIMESTAMP_FIELD: cosmo_measurement_timestamp,
                                         RainfallIntervalDataEntry.COSMO_CONDUCTIVITY_FIELD: cosmo_measurement.get_cosmo_conductivity(),
                                         RainfallIntervalDataEntry.COSMO_TEMPERATURE_WATER_FIELD: cosmo_measurement.get_cosmo_temperature_water(),
                                         RainfallIntervalDataEntry.CNV_HYDROMETRIC_TIMESTAMP_FIELD: cnv_hydrometric_timestamp,
                                         RainfallIntervalDataEntry.CNV_HYDROMETRIC_REVISED_STAGE_FIELD: cnv_hydrometric_measurement.get_cnv_hydrometric_revised_stage(),
-                                    }))
+                                    })
+
+                                    composite_measurement.set_db_destination(target_destination_db)
+
+                                    correlated_measurements.append(composite_measurement)
 
                                     # delete source cosmo measurement
                                     del cosmo_block_measurements[cosmo_measurement_timestamp]
@@ -664,7 +683,7 @@ def collect_interval_data(db_config_filename, db_importer):
     # TODO: some mechanism of mapping and lazyloading these measurement sets
     # TODO: executive decision on keeping a large dataset in memory vs retrieving it for each site
     # could be many sites, or not
-    # TODO: renable. right now skipping for testing correlation
+    # TODO: re-enable. right now skipping for testing correlation
     #cnv_flowworks_measurements = collect_cnv_flowworks_measurements(SOURCE_DB_CNV_FLOWWORKS_SITE, db_config_filename)
 
     # this is not a simple correlation.
@@ -676,15 +695,63 @@ def collect_interval_data(db_config_filename, db_importer):
     # cnv_hydrometrics_measurements = collect_cnv_hydrometric_measurements(SOURCE_DB_CNV_HYDROMETRICS_SITE,
     #                                                                      db_config_filename)
 
+    # sort function for a list of RainfallIntervalDataEntry for our specific purposes
+    # TODO: maybe fold this into DataEntry later on. decide on a default sort order:
+    # TODO: how do we sort a collection of DataEntry depending on the subclass implementation?
+    def sort_measurements(obj: RainfallIntervalDataEntry):
+        if not isinstance(obj, RainfallIntervalDataEntry):
+            raise Exception("Found something that isn't RainfallIntervalDataEntry in measurement list when attempting to sort")
+
+        cosmo_timestamp = obj.get_cosmo_timestamp()
+        cnv_hydrometric_timestamp = obj.get_cnv_hydrometric_timestamp()
+
+        # by cosmo date if that's the only measurement
+        # by cosmo date if both measurements exist
+        # by cnv hydro date if that's the only measurement
+        # else error log
+        if cosmo_timestamp is None:
+            if cnv_hydrometric_timestamp is not None:
+                return cnv_hydrometric_timestamp
+            else:
+                # neither defined -> invalid
+                pass
+        else:
+            # both cosmo and cnv_hydro measurements, go with cosmo
+            # though since this is a correlated measurement, the timestamps will be close
+            return cosmo_timestamp
+
+        raise Exception("Measurement missing timestamp and cannot be sorted:\n%s" % obj.to_s())
+
+
     for cosmo_site in COSMO_SITES:
         # get the cosmo measurments for the site
         # each measurement is a RainfallIntervalDataEntry with only cosmo elements defined
         #measurements[cosmo_site] = collect_cosmo_measurements(cosmo_site, SOURCE_DB_CNV_HYDROMETRICS_SITE, db_config_filename)
         # TODO: dict of mapping
-        measurements[cosmo_site] = collect_cosmo_and_cnvhydro_data(cosmo_site, SOURCE_DB_CNV_HYDROMETRICS_SITE,
-                                                                   db_config_filename)
 
-        # sort dataset by cosmo date for easier correlation
+        # returns a partially sorted array of measurements
+        # sql queries typically return results ordered by date in ASC order, and windowing is done from old to new
+        # essentially a flat array of sorted cosmo-only, sorted cnv-hydro-only, and sorted composite
+        # need everything sorted by which date fields are present
+
+        # measurements[cosmo_site] =
+        prelim_measurements = (collect_cosmo_and_cnvhydro_data(cosmo_site, SOURCE_DB_CNV_HYDROMETRICS_SITE,
+                                                                   db_config_filename))
+
+        print("Sorting measurements for cosmo_site %s" % cosmo_site)
+
+        sorting_start_time = timeit.default_timer()
+
+        # sort dataset in-place by measurement timestamp for easier correlation with rainfall values
+        prelim_measurements.sort(key=sort_measurements)
+
+        sorting_elapsed_time = (timeit.default_timer() - sorting_start_time)
+        print("Sorted preliminary measurements completed in %.3f sec" % sorting_elapsed_time)
+
+        # debugging
+        # print("Sorted measurements:")
+        # for measurement in prelim_measurements:
+        #     print ("%s\n------" % measurement.to_s())
 
         # for cnv_hydrometrics_measurement in cnv_hydrometrics_measurements:
         #     # do we have a cosmo measurement close enough? then set the fields of the existing measurement
@@ -700,10 +767,18 @@ def collect_interval_data(db_config_filename, db_importer):
         # sort again with new hydrometrics measurements
 
         # correlate 10-minute rainfall amounts with accumulated measurements
-        for measurement in measurements[cosmo_site]:
-            pass
 
-            # a measurement will have at least one oosmo, cnv-flowworks, or cnv-hydrometrics measurements
+
+
+        #################################################
+        # add measurements to importer
+        for measurement in prelim_measurements:
+
+            if TRACE_LOGGING:
+                    logger.debug("Adding measurement:\n%s" % measurement.to_s())
+            db_importer.add(measurement)
+
+            # a measurement will have at least one cosmo, cnv-flowworks, or cnv-hydrometrics measurements
             # as well as an associated timestamp
 
             # see if there are rainfall measurement
@@ -786,7 +861,7 @@ def collect_cnv_flowworks_measurements(sensor_name, db_config_filename):
                             # rainfall needs to be summed into 10 minute intervals, but only if measurements are 5 mins apart
 
                             data_entry = {
-                                RainfallIntervalDataEntry.CNV_FLOWWORKS_TIMESTAMP_FIELD: row[0],
+                                RainfallIntervalDataEntry.CNV_FLOWWORKS_TIMESTAMP1_FIELD: row[0],
                                 RainfallIntervalDataEntry.CNV_FLOWWORKS_RAINFALL_AMT_FIELD: row[1]
                             }
 
