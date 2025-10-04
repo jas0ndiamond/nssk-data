@@ -66,6 +66,20 @@ class RainfallIntervalDataEntry(DataEntry):
     def set_db_destination(self, dest):
         self.site_name = dest
 
+    # TODO: look into adding override requirement to DataEntry
+    def get_timestamp(self):
+        # return the timestamp associated with this event in order of precedence: cosmo, cnv hydro, cnv flowworks start
+        if self.is_defined(self.COSMO_TIMESTAMP_FIELD):
+            return self.get(self.COSMO_TIMESTAMP_FIELD)
+        elif self.is_defined(self.CNV_HYDROMETRIC_TIMESTAMP_FIELD):
+            return self.get(self.CNV_HYDROMETRIC_TIMESTAMP_FIELD)
+        elif self.is_defined(self.CNV_FLOWWORKS_RAINFALL_START_TIMESTAMP_FIELD):
+            return self.get(self.CNV_FLOWWORKS_RAINFALL_START_TIMESTAMP_FIELD)
+
+        # shouldn't get here since we require a timestamp at construction
+        return None
+
+
     def get_cosmo_timestamp(self):
         if self.is_defined(self.COSMO_TIMESTAMP_FIELD):
             return self.get(self.COSMO_TIMESTAMP_FIELD)
@@ -98,3 +112,10 @@ class RainfallIntervalDataEntry(DataEntry):
     # has a defined timestamp and revised flow
     def has_valid_cnv_hydrometric_measurement(self):
         pass
+
+    # TODO: add to DataEntry
+    def copy(self):
+        new_obj = RainfallIntervalDataEntry(self.entry_data)
+        new_obj.set_db_destination(self.site_name)
+
+        return new_obj
