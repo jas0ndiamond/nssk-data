@@ -212,14 +212,12 @@ class DBImporter:
                                     duplicates.append(insert)
                                 else:
                                     # problem but not a duplicate row
-                                    raise e
-                            except Error as e:
-                                self.logger.warning("Error running an insert:\n%s\nContinuing...\n" % insert)
-                                self.logger.warning(e)
+                                    self.logger.warning("Error running an insert:\n%s\nContinuing...\n" % insert)
+                                    self.logger.warning(e)
 
-                                errors.append(insert)
+                                    errors.append(insert)
 
-                                error_count += 1
+                                    error_count += 1
 
                             print("\r\t%d / %d (%d duplicates, %d errors)" %
                                   (insert_count, total_inserts, duplicate_count, error_count),
