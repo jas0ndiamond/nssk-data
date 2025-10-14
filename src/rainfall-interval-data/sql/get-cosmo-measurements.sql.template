@@ -3,9 +3,9 @@
 
 # aliases should match with schema fields in RainfallIntervalDataEntry
 
-# must be sorted ASC
+# mysql "BETWEEN" is inclusive of both dates/datetimes, dont use so we dont complicate stepping through the blocks
 
-# TODO: database name as parameter
+# must be sorted ASC
 
 SELECT
 	CAST(CONCAT_WS(' ', $DB.$COSMO_SITE.ActivityStartDate, $DB.$COSMO_SITE.ActivityStartTime) as DATETIME) as CosmoTimestamp,
@@ -13,8 +13,7 @@ SELECT
   	MAX(CASE WHEN $DB.$COSMO_SITE.CharacteristicName = 'Temperature water' THEN $DB.$COSMO_SITE.ResultValue END) as TemperatureWater
 FROM $DB.$COSMO_SITE
 WHERE
-	($DB.$COSMO_SITE.ActivityStartDate BETWEEN '$COSMO_START_DATETIME' AND '$COSMO_END_DATETIME') AND
-	($DB.$COSMO_SITE.ActivityStartTime >= '00:00:00' AND  $DB.$COSMO_SITE.ActivityStartTime < '23:59:59')
+	($DB.$COSMO_SITE.ActivityStartDate >= '$COSMO_START_DATE' AND $DB.$COSMO_SITE.ActivityStartDate < '$COSMO_END_DATE')
 GROUP BY
   	CosmoTimestamp
 ORDER BY
