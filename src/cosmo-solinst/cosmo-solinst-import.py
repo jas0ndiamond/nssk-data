@@ -3,6 +3,7 @@ import sys
 import timeit
 import argparse
 import logging
+import re
 
 from datetime import datetime
 from pathlib import Path
@@ -121,6 +122,51 @@ cosmo_schema = [
     "LaboratorySampleID",
 ]
 
+# take in a date and time field, and return a timestamp in format "YYYY-MM-DD HH:mm:SS"
+# input date could use "/" or "-"
+# input timestamp could be 24h or 12h format
+def get_timestamp(measurement_date, measurement_timestamp):
+    # fields used in all measurements
+    # YYYY-MM-DD
+
+    # HH:MM:SS
+    # 12h format
+    # hour field isn't always zero-padded
+
+    timestamp_lc = measurement_timestamp.lower()
+
+    # determine if 12h or 24h time and retrieve 24 time
+    if "am" in timestamp_lc or "pm" in timestamp_lc:
+        #12h time
+        entry_timestamp = datetime.strptime(measurement_timestamp, "%I:%M:%S %p")
+        entry_time_24h = datetime.strftime(entry_timestamp, "%H:%M:%S")
+
+        if TRACE_LOGGING:
+            logger.debug("Converting 12h datetime to 24h. %s => %s" % (measurement_timestamp, entry_time_24h))
+    else:
+        #24h time
+        entry_timestamp = datetime.strptime(measurement_timestamp, "%H:%M:%S")
+        entry_time_24h = datetime.strftime(entry_timestamp, "%H:%M:%S")
+
+        if TRACE_LOGGING:
+            logger.debug("Measurement datetime already in 24h format. %s => %s" % (measurement_timestamp, entry_time_24h))
+
+    # determine date separator and retrieve date
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", measurement_date):
+        # hyphen separator
+        entry_datetime = datetime.strptime(measurement_date, "%Y-%m-%d")
+        entry_date = datetime.strftime(entry_datetime, "%Y-%m-%d")
+    elif re.fullmatch(r"\d{4}/\d{2}/\d{2}", measurement_date):
+        # forward slash separator
+        entry_datetime = datetime.strptime(measurement_date, "%Y/%m/%d")
+        entry_date = datetime.strftime(entry_datetime, "%Y/%m/%d")
+    else:
+        raise "Date in unknown format"
+
+    if TRACE_LOGGING:
+        logger.debug("Date conversion %s => %s" % (measurement_date, entry_date))
+
+    return entry_date, entry_time_24h
 
 ###############################
 
@@ -239,25 +285,10 @@ def main(parsed_args):
                 entry_temperature = None
 
                 # an invalid measurement should not invalidate the whole row
+                # time_ms = row[2]/row["ms"] # not used
 
-                # fields used in all measurements
-                # YYYY-MM-DD
-                entry_date = row["Date"]
-
-                # HH:MM:SS
-                # 12h format
-                # hour field isn't always zero-padded
-                entry_time_12h = row["Time"]
-                # time_ms = row[2] # not used
-
-                # TODO check validity of date and time strings
-
-                # convert time to 24h
-                entry_time_12h_datetime = datetime.strptime(entry_time_12h, "%I:%M:%S %p")
-                entry_time_24h = datetime.strftime(entry_time_12h_datetime, "%H:%M:%S")
-
-                if TRACE_LOGGING:
-                    logger.debug("Converting 12h datetime to 24h. %s => %s" % (entry_time_12h_datetime, entry_time_24h))
+                # parse the date and time from whatever format
+                (entry_date, entry_time_24h) = get_timestamp(row["Date"], row["Time"])
 
                 #############
                 # entry for water level
