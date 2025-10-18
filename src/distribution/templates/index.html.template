@@ -10,7 +10,7 @@
 table, th, td {
   border: 1px solid blue;
   border-collapse: collapse;
-  width: 820px;
+  width: 1080px;
 }
 th {
     text-align: center;
@@ -27,7 +27,7 @@ hr {
 }
 body {
     background-color: #e0e0eb;
-    width: 820px;
+    width: 1080px;
 }
 </style>
 </head>
@@ -68,6 +68,11 @@ $RAINFALL_EVENTS_BLOCK
 <h3>Rainfall Event Data</h3>
 Rainfall Event Data occurring in CNV/DNV area<br>
 $RAINFALL_EVENT_DATA_BLOCK
+
+<hr>
+<h3>Rainfall Event Data Aggregate</h3>
+Rainfall Event Data Aggregate amounts occurring in CNV/DNV area<br>
+$RAINFALL_EVENT_DATA_AGGREGATE_BLOCK
 
 <hr>
 <h3>CNV Hydrometric</h3>
