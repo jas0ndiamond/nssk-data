@@ -118,6 +118,11 @@ DUMP_FILES_RAINFALL_EVENT_DATA = {
     "WAGG03": "nssk_rainfall_event_data.WAGG03.csv"
 }
 
+DUMP_FILES_RAINFALL_EVENT_DATA_AGGREGATE = {
+    "WAGG01": "nssk_rainfall_event_data_aggregate.WAGG01.csv",
+    "WAGG03": "nssk_rainfall_event_data_aggregate.WAGG03.csv"
+}
+
 DUMP_FILES_CNV_HYDROMETRIC = {
     "WaggCreek": "nssk_cnv_hydrometric.WaggCreek.csv"
 }
@@ -171,7 +176,8 @@ def precheck(db_config_filename):
             try:
                 with connection.cursor() as cursor:
 
-                    # check databases/tables exist. exception otherwise
+                    # TODO: check databases/tables exist. exception otherwise
+                    # what if this is a botched install?
                     pass
 
             except Error as e:
@@ -221,6 +227,11 @@ def run_dump(db_config_filename):
                     # dump rainfall event data
                     print("Dumping Rainfall Event Data")
                     dump_rainfall_event_data(cursor)
+
+                    # dump rainfall event totals
+                    # needs to execute after rainfall event data
+                    print("Dumping Rainfall Event Data Aggregate")
+                    dump_rainfall_event_data_aggregate(cursor)
 
                     # dump cnv hydrometric
                     print("Dumping CNV Hydrometric")
@@ -418,6 +429,43 @@ def dump_rainfall_event_data(cursor):
                 csv_writer.writerows(rows)
                 rows = cursor.fetchmany(FETCH_SIZE)
 
+def dump_rainfall_event_data_aggregate(cursor):
+    # read query template from file
+    query_template = Template(open("templates/sql/rainfall-event-data-aggregate.sql.template").read())
+
+    for site in DUMP_FILES_RAINFALL_EVENT_DATA_AGGREGATE:
+
+        # manually write header
+
+        # the query is hardcoded, so hardcode the schema
+        schema = [
+            "EventID",
+            "StartTimestamp",
+            "EndTimestamp",
+            "TotalRainfall",
+            "TotalFlow"
+        ]
+
+        # dump table contents
+        with (open(TEMP_DIR + DUMP_FILES_RAINFALL_EVENT_DATA_AGGREGATE[site], 'w') as writer):
+            csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
+            csv_writer.writerow(schema)
+
+            query = query_template.substitute(
+                DB=NSSK_RAINFALL_EVENTS_DB,
+                RAINFALL_EVENTS_TABLE="RAINFALL_EVENTS",
+                SITE=site
+            )
+
+            # print("Query: %s" % query)
+            cursor.execute(query)
+
+            rows = cursor.fetchmany(FETCH_SIZE)
+
+            while rows is not None and rows:
+                csv_writer.writerows(rows)
+                rows = cursor.fetchmany(FETCH_SIZE)
+
 def dump_waterrangers(cursor):
     for site in DUMP_FILES_WATERRANGERS:
         # manually write header
@@ -528,6 +576,9 @@ def zip_dump_files():
 
     for site in DUMP_FILES_RAINFALL_EVENT_DATA:
         zip_dump_file(DUMP_FILES_RAINFALL_EVENT_DATA[site])
+
+    for site in DUMP_FILES_RAINFALL_EVENT_DATA_AGGREGATE:
+        zip_dump_file(DUMP_FILES_RAINFALL_EVENT_DATA_AGGREGATE[site])
 
     for site in DUMP_FILES_CNV_HYDROMETRIC:
         zip_dump_file(DUMP_FILES_CNV_HYDROMETRIC[site])
@@ -736,6 +787,35 @@ def write_html_file():
     )
 
     ##########
+    # Rainfall Event Data Aggregate
+
+    rainfall_event_data_aggregate_section_body = ""
+    for name in DUMP_FILES_RAINFALL_EVENT_DATA_AGGREGATE:
+        csv_file = DUMP_FILES_RAINFALL_EVENT_DATA_AGGREGATE[name]
+        zip_file = "%s.zip" % DUMP_FILES_RAINFALL_EVENT_DATA_AGGREGATE[name]
+
+        # file in the work dir (./tmp/file.csv)
+        file_in_dist = "%s/%s" % (TEMP_DIR, csv_file)
+
+        # http links to files deployed on webserver (./file.csv, ./file.csv.zip)
+        zip_file_link = "./%s" % zip_file
+        csv_file_link = "./%s" % csv_file
+
+        rainfall_event_data_aggregate_section_body += resource_entry_template.substitute(
+            FILE=csv_file,
+            CSV_LINK=csv_file_link,
+            ZIP_LINK=zip_file_link,
+            NAME=DUMP_FILES_RAINFALL_EVENT_DATA_AGGREGATE[name],
+            DESC="Rainfall Event Aggregate values for site %s" % name,
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / BYTES_IN_MB),
+            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
+        )
+
+    rainfall_event_data_aggregate_section_block = section_block_template.substitute(
+        SECTION_BODY=rainfall_event_data_aggregate_section_body
+    )
+
+    ##########
     # CNV Hydrometric
 
     cnv_hydrometric_section_body = ""
@@ -828,6 +908,7 @@ def write_html_file():
         CONDUCTIVITY_RAINFALL_CORRELATION_BLOCK=conductivity_rainfall_correlation_section_block,
         RAINFALL_EVENTS_BLOCK=rainfall_events_section_block,
         RAINFALL_EVENT_DATA_BLOCK=rainfall_event_data_section_block,
+        RAINFALL_EVENT_DATA_AGGREGATE_BLOCK=rainfall_event_data_aggregate_section_block,
         CNV_HYDROMETRIC_BLOCK=cnv_hydrometric_section_block,
         CHLORIDE_ACUITY_BLOCK=chloride_acuity_section_body,
         WATERRANGERS_BLOCK=waterrangers_section_block
