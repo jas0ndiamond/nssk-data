@@ -203,16 +203,18 @@ class DBImporter:
                                 # Arguments: (IntegrityError(1062, "1062 (23000): Duplicate entry
                                 # '2019-06-12-10:00:00-Temperature, water' for key 'WAGG01.PRIMARY'", '23000'),
                                 # )
-                                if " Duplicate entry " in e.args[1] and " for key " in e.args[1]:
+                                message = str(e.args[1])
+
+                                if " Duplicate entry " in message and " for key " in message:
 
                                     self.logger.warning(
-                                        "Attempted to insert duplicate row:\n%s\nContinuing..." % insert)
+                                        "Attempted to insert duplicate row:\n%s\nmessage: %s\nContinuing..." % (insert, message))
                                     duplicate_count += 1
 
                                     duplicates.append(insert)
                                 else:
                                     # problem but not a duplicate row
-                                    self.logger.warning("Error running an insert:\n%s\nContinuing...\n" % insert)
+                                    self.logger.warning("Error running an insert:\n%s\nmessage: %s\nContinuing...\n" % (insert, message))
                                     self.logger.warning(e)
 
                                     errors.append(insert)
