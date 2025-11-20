@@ -44,18 +44,19 @@ CNV_FLOWWORKS_CORRELATION_WINDOW = 5 * 60
 # increment to step through measurements in a COSMO table
 # shouldn't be too big
 # 7 days
-COSMO_SCAN_INCREMENT = 60 * 60 * 24 * 7
+SCAN_WINDOW_DAYS = 14
+COSMO_SCAN_INCREMENT = 60 * 60 * 24 * SCAN_WINDOW_DAYS
 
 # increment to step through measurements in a cnv flowworks table
 # shouldn't be too big
 # 7 days
 # 1 day for test value
-CNV_FLOWWORKS_SCAN_INCREMENT = 60 * 60 * 24 * 7
+CNV_FLOWWORKS_SCAN_INCREMENT = 60 * 60 * 24 * SCAN_WINDOW_DAYS
 
 # increment to step through measurements in a cnv hydrometric table
 # shouldn't be too big
 # 7 days
-CNV_HYDROMETRIC_SCAN_INCREMENT = 60 * 60 * 24 * 7
+CNV_HYDROMETRIC_SCAN_INCREMENT = 60 * 60 * 24 * SCAN_WINDOW_DAYS
 
 # ideally how far apart rainfall measurements are apart timewise for consideration in 10-minute intervals
 # in seconds
@@ -98,6 +99,11 @@ SCHEMA = [
     RainfallIntervalDataEntry.CNV_FLOWWORKS_AIR_TEMPERATURE_FIELD,
 ]
 
+MYSQL_DATE_FMT = "%Y-%m-%d %H:%M:%S"
+
+# TODO: use these and implement in other importers as warranted
+ORDER_ASC = "ASC"
+ORDER_DESC = "DESC"
 
 def precheck(conf_file):
     # need a destination database/table for the correlated data
@@ -173,9 +179,11 @@ def precheck(conf_file):
                         if cursor.fetchone()[0]:
                             # TODO: we have write access to insert, should also be able to drop. for now just throw an exception
                             # add a -f flag to shell args, if not present, prompt for user confirmation to proceed with drop
-                            raise PrecheckFailedException("Destination table %s.%s is not empty." % (target_db, sensor))
+                            #raise PrecheckFailedException("Destination table %s.%s is not empty." % (target_db, sensor))
 
-                            #cursor.execute("truncate table %s.%s" % (SOURCE_DB_CNV_FLOWWORKS, sensor))
+                            logger.debug("Truncating destination table %s.%s" % (target_db, sensor))
+
+                            cursor.execute("truncate table %s.%s" % (target_db, sensor))
                         else:
                             logger.debug("Destination table %s.%s is empty. Proceeding." % (target_db, sensor))
 
@@ -192,7 +200,7 @@ def precheck(conf_file):
         raise
 
 
-# return start and end dates for both cosmo conductivity measurements, and cnv rainfall measurements
+# return start and end dates for both cosmo conductivity measurements
 def get_cosmo_measurements_date_window(cursor, sensor_name):
     ###################
     # determine cosmo start datetime (earliest conductivity measurement)
@@ -454,24 +462,26 @@ def collect_cosmo_and_cnvhydro_measurements(cosmo_site_name, cnv_hydro_site_name
                                 cosmo_date_inc + datetime.timedelta(seconds=COSMO_SCAN_INCREMENT))
 
                         # retrieve the cnv hydrometric data for the time of the cosmo block, +/- CORRELATION_WINDOW
-                        cnv_hydro_block_start_time = cosmo_block_start_datetime - datetime.timedelta(
+                        cnv_hydro_block_start_datetime = cosmo_block_start_datetime - datetime.timedelta(
                             seconds=CNV_HYDROMETRIC_CORRELATION_WINDOW)
-                        cnv_hydro_block_end_time = cosmo_block_end_datetime + datetime.timedelta(
+                        cnv_hydro_block_end_datetime = cosmo_block_end_datetime + datetime.timedelta(
                             seconds=CNV_HYDROMETRIC_CORRELATION_WINDOW)
 
                         cosmo_block_measurements_sql = cosmo_measurements_query_template.substitute(
                             DB=SOURCE_DB_NSSK_COSMO,
                             COSMO_SITE=cosmo_site_name,
-                            COSMO_START_DATE=cosmo_block_start_datetime.date(),
-                            COSMO_END_DATE=cosmo_block_end_datetime.date(),
-                            #COSMO_START_TIME=cosmo_block_start_datetime.time(),
-                            #COSMO_END_TIME=cosmo_block_end_datetime.time()
+                            COSMO_START_DATETIME=cosmo_block_start_datetime,
+                            COSMO_END_DATETIME=cosmo_block_end_datetime
+                            # COSMO_START_DATE=cosmo_block_start_datetime.date(),
+                            # COSMO_END_DATE=cosmo_block_end_datetime.date(),
+                            # COSMO_START_TIME=cosmo_block_start_datetime.time(),
+                            # COSMO_END_TIME=cosmo_block_end_datetime.time()
                         )
 
                         cnv_hydrometric_block_measurements_sql = cnv_hydrometric_measurements_query_template.substitute(
                             CNV_HYDROMETRIC_SITE=cnv_hydro_site_name,
-                            CNV_HYDROMETRIC_START_DATETIME=cnv_hydro_block_start_time,
-                            CNV_HYDROMETRIC_END_DATETIME=cnv_hydro_block_end_time
+                            CNV_HYDROMETRIC_START_DATETIME=cnv_hydro_block_start_datetime,
+                            CNV_HYDROMETRIC_END_DATETIME=cnv_hydro_block_end_datetime
                         )
 
                         ###########
@@ -520,8 +530,8 @@ def collect_cosmo_and_cnvhydro_measurements(cosmo_site_name, cnv_hydro_site_name
                         cnv_hydrometric_block_measurements = {}
 
                         if TRACE_LOGGING:
-                            logger.debug("Starting scan of cnv hydrometric block %s -> %s" % (cnv_hydro_block_start_time,
-                                                                              cnv_hydro_block_end_time))
+                            logger.debug("Ending scan of cnv hydrometric block %s -> %s" % (cnv_hydro_block_start_datetime,
+                                                                              cnv_hydro_block_end_datetime))
 
                         logger.debug("Retrieving cnv hydrometric measurements with query:\n%s",
                                      cnv_hydrometric_block_measurements_sql)
@@ -548,6 +558,9 @@ def collect_cosmo_and_cnvhydro_measurements(cosmo_site_name, cnv_hydro_site_name
                                 new_entry.set_db_destination(target_destination_db)
 
                                 cnv_hydrometric_block_measurements[measurement_timestamp] = new_entry
+
+                                # TODO: log something here?
+
                             except DataValidationException as e:
                                 logger.error(
                                     "Validation error building DataEntry from cnv hydrometric measurement (%s) checking databases. Discarding" % data_entry,
@@ -555,6 +568,10 @@ def collect_cosmo_and_cnvhydro_measurements(cosmo_site_name, cnv_hydro_site_name
 
                             # grab next row
                             row = cursor.fetchone()
+
+                        if TRACE_LOGGING:
+                            logger.debug("Starting scan of cnv hydrometric block %s -> %s" % (cnv_hydro_block_start_datetime,
+                                                                              cnv_hydro_block_end_datetime))
 
                         logger.debug("Retrieving cnv hydrometric measurements completed.")
 
@@ -641,6 +658,10 @@ def collect_cosmo_and_cnvhydro_measurements(cosmo_site_name, cnv_hydro_site_name
                         # add remaining cnv hydro measurements to cnv_hydro_measurements{}
                         cnv_hydro_measurements.update(cnv_hydrometric_block_measurements)
 
+                        if TRACE_LOGGING:
+                            logger.debug("Ending scan of cosmo block %s -> %s" % (cosmo_block_start_datetime,
+                                                                              cosmo_block_end_datetime))
+
                         # increment source block start time
                         # ensure overlapping time windows are managed by query, and here
                         # query should be date_field >= start_date and date_field < end_date
@@ -648,6 +669,20 @@ def collect_cosmo_and_cnvhydro_measurements(cosmo_site_name, cnv_hydro_site_name
 
                     print("\nFinished processing cosmo and cnv hydrometric measurements. Consolidating...")
                     # all blocks are finished processing
+
+                    # print out of how many measurements we found
+                    log_msg = "Total cosmo measurement count: %d" % len(cosmo_measurements.values())
+                    print("%s" % log_msg, flush=True)
+                    logger.info(log_msg)
+
+                    log_msg = "Total cnv hydrometric measurement count: %d" % len(cnv_hydro_measurements.values())
+                    print("%s" % log_msg, flush=True)
+                    logger.info(log_msg)
+
+                    log_msg = "Total correlated measurement count: %d" % len(correlated_measurements)
+                    print("%s" % log_msg, flush=True)
+                    logger.info(log_msg)
+
 
                     ##################################
                     # TODO: add any preceding or trailing cnv hydrometric data
@@ -675,17 +710,25 @@ def collect_cosmo_and_cnvhydro_measurements(cosmo_site_name, cnv_hydro_site_name
     return final_measurements
 
 
-def correlate_rainfall_data(prelim_measurements, cosmo_site, cnv_flowworks_site, db_config_filename):
+def correlate_rainfall_data(prelim_measurements, cosmo_site, cnv_flowworks_site, db_config_filename
+) -> list[RainfallIntervalDataEntry]:
     """
-
+    Assemble 10-minute rainfall intervals from the 5-minute measurements, and attempt to correlate them with the existing
+    cosmo/cnv hydrometric measurements.
     :param prelim_measurements: sorted list of preliminary measurements containing cosmo and cnv hydrometric measurements
     :param cosmo_site:  cosmo site that prelim_measurements applies to
     :param cnv_flowworks_site:  cnv flowworks site to consider rainfall measurements from
     :param db_config_filename:  database config file to use to connect to our database
     :return:
     """
+    # the aggregate list of all processed measurements, correlated with rainfall intervals or not
     final_measurements: list[RainfallIntervalDataEntry] = []
-    new_measurements: list[RainfallIntervalDataEntry] = []
+
+    # measurements correlated with rainfall intervals
+    correlated_rainfall_measurements: list[RainfallIntervalDataEntry] = []
+
+    # measurements correlated with rainfall intervals
+    uncorrelated_rainfall_measurements: list[RainfallIntervalDataEntry] = []
 
     config = DBConfigFactory.build(db_config_filename)
 
@@ -708,8 +751,8 @@ def correlate_rainfall_data(prelim_measurements, cosmo_site, cnv_flowworks_site,
                     )
 
                     # get cnv flowworks date range for block
-                    (cnv_flowworks_start_time,
-                     cnv_flowworks_end_time) = get_cnv_flowworks_measurements_date_window(cursor, cnv_flowworks_site)
+                    (cnv_flowworks_start_datetime,
+                     cnv_flowworks_end_datetime) = get_cnv_flowworks_measurements_date_window(cursor, cnv_flowworks_site)
 
                     # window through rainfall data, find the best 2 rainfall measurements that correlate with known
                     # cosmo/cnv hydrometric measurements
@@ -747,7 +790,7 @@ def correlate_rainfall_data(prelim_measurements, cosmo_site, cnv_flowworks_site,
                     # flowworks dataset
 
                     # cnv flowworks is our "primary" dataset used in this correlation
-                    cnv_flowworks_inc = cnv_flowworks_start_time
+                    cnv_flowworks_inc = cnv_flowworks_start_datetime
 
                     # running tally of how many 10-minute intervals we've collected
                     rainfall_measurement_count = 0
@@ -755,32 +798,40 @@ def correlate_rainfall_data(prelim_measurements, cosmo_site, cnv_flowworks_site,
                     trailing_rainfall_measurement = None
 
                     # datasets can be pretty large. step through the table in time blocks
-                    while cnv_flowworks_inc <= cnv_flowworks_end_time:
+                    while cnv_flowworks_inc <= cnv_flowworks_end_datetime:
 
                         # determine window and build queries
-                        cnv_flowworks_block_start_date = cnv_flowworks_inc
-                        cnv_flowworks_block_end_date = (
+                        cnv_flowworks_block_start_datetime = cnv_flowworks_inc
+                        cnv_flowworks_block_end_datetime = (
                                 cnv_flowworks_inc + datetime.timedelta(seconds=CNV_FLOWWORKS_SCAN_INCREMENT))
 
                         # retrieve the cnv flowworks data for the corresponding date range, +/- CORRELATION_WINDOW
 
-                        # TODO: FIX!! THIS IS TRUNCATING THE TIME
+                        # TODO: there are overlaps here. confirm this is expected
+#2025-11-16 01:14:46,756 [DEBUG] -- [__main__]-[correlate_rainfall_data]: Starting scan of WAGG01 block 2022-03-19 23:55:00 => 2022-04-03 00:05:00
+#2025-11-16 01:14:47,380 [DEBUG] -- [__main__]-[correlate_rainfall_data]: Starting scan of WAGG01 block 2022-04-02 23:55:00 => 2022-04-17 00:05:00
+#2025-11-16 01:14:48,003 [DEBUG] -- [__main__]-[correlate_rainfall_data]: Starting scan of WAGG01 block 2022-04-16 23:55:00 => 2022-05-01 00:05:00
 
-                        cnv_flowworks_block_start_time = cnv_flowworks_block_start_date - datetime.timedelta(
-                            seconds=CNV_FLOWWORKS_CORRELATION_WINDOW)
-                        cnv_flowworks_block_end_time = cnv_flowworks_block_end_date + datetime.timedelta(
-                            seconds=CNV_FLOWWORKS_CORRELATION_WINDOW)
+                        # TODO: this is a problem, fix
+                        #
+                        # cnv_flowworks_block_start_time = cnv_flowworks_block_start_date - datetime.timedelta(
+                        #     seconds=CNV_FLOWWORKS_CORRELATION_WINDOW)
+                        # cnv_flowworks_block_end_time = cnv_flowworks_block_end_date + datetime.timedelta(
+                        #     seconds=CNV_FLOWWORKS_CORRELATION_WINDOW)
 
                         cnv_flowworks_block_measurements_sql = cnv_flowworks_measurements_query_template.substitute(
                             DB=SOURCE_DB_CNV_FLOWWORKS,
                             SITE=cnv_flowworks_site,
-                            CNV_FLOWWORKS_START_DATETIME=cnv_flowworks_block_start_time,
-                            CNV_FLOWWORKS_END_DATETIME=cnv_flowworks_block_end_time
+                            CNV_FLOWWORKS_START_DATETIME=cnv_flowworks_block_start_datetime,
+                            CNV_FLOWWORKS_END_DATETIME=cnv_flowworks_block_end_datetime
                         )
 
                         if TRACE_LOGGING:
-                            logger.debug("Starting scan of block %s => %s" % (cnv_flowworks_block_start_time,
-                                                                              cnv_flowworks_block_end_time))
+                            logger.debug("Starting scan of cnv flowworks %s block %s => %s" % (
+                                cosmo_site,
+                                cnv_flowworks_block_start_datetime,
+                                cnv_flowworks_block_end_datetime)
+                            )
 
                         ###########
                         # retrieve and process cnv flowworks measurements for block
@@ -803,13 +854,18 @@ def correlate_rainfall_data(prelim_measurements, cosmo_site, cnv_flowworks_site,
                         # do not want overlap
                         block_measurements = get_block_prelim_measurements(
                             prelim_measurements,
-                            cnv_flowworks_block_start_time,
-                            cnv_flowworks_block_end_time
+                            cnv_flowworks_block_start_datetime,
+                            cnv_flowworks_block_end_datetime
                         )
 
-                        row_i = 0
+                        # count the initial block size, we'll be removing correlated elements from it in
+                        # add_rainfall_interval_measurement and want to compare sizes later
+                        initial_block_measurement_count = len(block_measurements)
+
+                        # with our block of rainfall measurements from the sql query, find sets of two measurements
+                        # that are 5 minutes apart, and attempt to correlate with existing correlation of cosmo/cnvhydro
+                        # measurements
                         row_count = len(rows)
-                        #for row in rows:
                         for row_i in range(row_count):
 
                             row = rows[row_i]
@@ -860,7 +916,8 @@ def correlate_rainfall_data(prelim_measurements, cosmo_site, cnv_flowworks_site,
                                 first_rainfall_measurement = list(trailing_rainfall_measurement)
                                 second_rainfall_measurement = list(row)
 
-                                # TODO: type check
+                                # TODO: type/sanity check on what a valid measurement looks like?
+                                # trust database to enforce this?
 
                                 # unset trailing_rainfall_measurement now that we're done with it
                                 trailing_rainfall_measurement = None
@@ -873,8 +930,10 @@ def correlate_rainfall_data(prelim_measurements, cosmo_site, cnv_flowworks_site,
                                     trailing_rainfall_measurement = list(row)
 
                                     if TRACE_LOGGING:
-                                        logger.debug("Setting trailing_rainfall_measurement for next block: %s",
-                                                     trailing_rainfall_measurement)
+                                        logger.debug("Setting trailing_rainfall_measurement for next block: %s => %s" %
+                                            (trailing_rainfall_measurement[0].strftime('%Y-%m-%d %H:%M:%S'),
+                                            trailing_rainfall_measurement)
+                                        )
 
                                     # count this row as processed
                                     row_i += 1
@@ -897,7 +956,8 @@ def correlate_rainfall_data(prelim_measurements, cosmo_site, cnv_flowworks_site,
                             # we're at first_rainfall_measurement, is second_rainfall_measurement 5 mins later (plus or minus buffer)?
                             # difference in seconds
                             measurement_time_difference = abs(
-                                (first_rainfall_measurement[0] - second_rainfall_measurement[0]).total_seconds())
+                                (first_rainfall_measurement[0] - second_rainfall_measurement[0]).total_seconds()
+                            )
                             bounds_max = RAINFALL_INTERVAL_LEN + RAINFALL_INTERVAL_BUFFER
                             bounds_min = RAINFALL_INTERVAL_LEN - RAINFALL_INTERVAL_BUFFER
                             if bounds_max > measurement_time_difference > bounds_min:
@@ -906,8 +966,10 @@ def correlate_rainfall_data(prelim_measurements, cosmo_site, cnv_flowworks_site,
                                 if TRACE_LOGGING:
                                     logger.debug(
                                         "Found first/second rainfall measurements comprise a 10-minute interval.\n" +
-                                        "first: %s\nsecond: %s" % (first_rainfall_measurement,
-                                                                   second_rainfall_measurement))
+                                        "first: %s => %s\nsecond: %s => %s" % (
+                                            first_rainfall_measurement[0].strftime(MYSQL_DATE_FMT), first_rainfall_measurement,
+                                            second_rainfall_measurement[0].strftime(MYSQL_DATE_FMT), second_rainfall_measurement)
+                                    )
 
                                 # see if we have a cosmo/hydro measurement within our interval
                                 # use baro pressure and air temperature of the first measurement. don't expect these to
@@ -915,8 +977,9 @@ def correlate_rainfall_data(prelim_measurements, cosmo_site, cnv_flowworks_site,
                                 add_rainfall_interval_measurement(
                                     first_rainfall_measurement,
                                     second_rainfall_measurement,
+                                    cosmo_site,
                                     block_measurements,
-                                    new_measurements
+                                    correlated_rainfall_measurements
                                 )
 
                                 # yes => insert the rainfall data into the existing RainfallIntervalDataEntry
@@ -931,8 +994,10 @@ def correlate_rainfall_data(prelim_measurements, cosmo_site, cnv_flowworks_site,
                                 if TRACE_LOGGING:
                                     logger.debug(
                                         "Found first/second measurements do not comprise a 10-minute interval.\n" +
-                                        "first: %s\nsecond: %s" % (first_rainfall_measurement,
-                                                                   second_rainfall_measurement))
+                                        "first: %s => %s\nsecond: %s => %s" % (
+                                            first_rainfall_measurement[0].strftime(MYSQL_DATE_FMT), first_rainfall_measurement,
+                                            second_rainfall_measurement[0].strftime(MYSQL_DATE_FMT), second_rainfall_measurement)
+                                    )
                                 # cannot make an interval. do nothing this iteration.
 
                                 # consider the second_rainfall_measurement as the first element next as the trailing_rainfall_measurement
@@ -944,27 +1009,30 @@ def correlate_rainfall_data(prelim_measurements, cosmo_site, cnv_flowworks_site,
                         # shouldn't need to call cursor.reset() since we're fetching everything from the cursor
 
                         if TRACE_LOGGING:
-                            logger.debug("Ending scan of block %s => %s" % (cnv_flowworks_block_start_time,
-                                                                            cnv_flowworks_block_end_time))
+                            logger.debug("Ending scan of cnv flowworks %s block %s => %s" %
+                                (cosmo_site, cnv_flowworks_block_start_datetime, cnv_flowworks_block_end_datetime))
+
+                        # add uncorrelated measurements in this block to the running list
+                        # comparison of original block size to the remaining measurements in the block
+                        if TRACE_LOGGING:
+                            logger.debug(
+                                "Adding %d measurements uncorrelated with rainfall from initial block size %d" %
+                                (len(block_measurements), initial_block_measurement_count)
+                            )
+
+                        uncorrelated_rainfall_measurements.extend(block_measurements)
 
                         # increment source block start time
                         # ensure overlapping time windows are managed by query, and here
                         # query should be date_field >= start_date and date_field < end_date
+                        # existence of a trailing measurement should not affect this, so long as the mysql query is
+                        # exclusive of the block end datetime
                         cnv_flowworks_inc = cnv_flowworks_inc + datetime.timedelta(seconds=CNV_FLOWWORKS_SCAN_INCREMENT)
 
                     correlation_processing_elapsed_time = (timeit.default_timer() - correlation_processing_start_time)
                     log_msg = "Completed rainfall correlation Processing in %.3f sec" % correlation_processing_elapsed_time
                     print("\n%s" % log_msg, flush=True)
                     logger.info(log_msg)
-
-
-                    # form our set of correlated and uncorrelated measurements
-                    final_measurements.extend(prelim_measurements)
-
-                    for new_measurement in new_measurements:
-                        new_measurement.set_db_destination(cosmo_site)
-                        final_measurements.append(new_measurement)
-
             except Error as e:
                 logger.error("Error checking databases", exc_info=True)
                 raise e
@@ -972,15 +1040,29 @@ def correlate_rainfall_data(prelim_measurements, cosmo_site, cnv_flowworks_site,
         logger.error("Error connecting to database", exc_info=True)
         raise e
 
+    ##########################
+    # form our set of correlated and uncorrelated measurements
+
+    # add measurements that do not correlate with 10-minute rainfall intervals to the final list
+    final_measurements.extend(uncorrelated_rainfall_measurements)
+
+    # add measurements that do correlate with 10-minute rainfall intervals to the final list
+    for new_measurement in correlated_rainfall_measurements:
+        if TRACE_LOGGING:
+            logger.debug("Adding new correlated measurement: %s", new_measurement.to_s())
+        new_measurement.set_db_destination(cosmo_site)
+        final_measurements.append(new_measurement)
+
     return final_measurements
 
 
 def add_rainfall_interval_measurement(
         first_rainfall_measurement: list,
         second_rainfall_measurement: list,
+        site: str,
         measurements: list[RainfallIntervalDataEntry],
         new_measurements: list[RainfallIntervalDataEntry]
-):
+) -> list[RainfallIntervalDataEntry]:
     """
     We have a pair of rainfall measurements, compute the 10minute rainfall total, and add to the known measurements.
     Consider air temperature and baro pressure from the first measurement. These don't typically change much over
@@ -988,6 +1070,7 @@ def add_rainfall_interval_measurement(
 
     first_measurement and second_measurement must comprise a pair consecutive 5-minute rainfall measurements.
 
+    :param site:
     :param first_rainfall_measurement: database row data comprising the first rainfall measurement
     :param second_rainfall_measurement: database row data comprising the second rainfall measurement
     :param measurements: List of correlated cosmo/cnvhydro measurements to attempt to correlate rainfall measurements
@@ -1025,8 +1108,8 @@ def add_rainfall_interval_measurement(
 
             if TRACE_LOGGING:
                 logger.debug(
-                    "Rainfall measurement at %s correlates to cosmo/cnvhydro measurement at %s.\nfirst: %s\nsecond: %s" %
-                    (target_timestamp, measurement_timestamp, first_rainfall_measurement, second_rainfall_measurement))
+                    "Rainfall measurement at %s correlates to cosmo/cnvhydro measurement at %s for site %s:\nfirst: %s\nsecond: %s" %
+                    (target_timestamp, measurement_timestamp, site, first_rainfall_measurement, second_rainfall_measurement))
 
             # create a new copy to modify
             new_measurement = measurement.copy()
@@ -1045,6 +1128,9 @@ def add_rainfall_interval_measurement(
             new_measurement.set(RainfallIntervalDataEntry.CNV_FLOWWORKS_AIR_TEMPERATURE_FIELD,
                                 first_rainfall_measurement[3])
 
+
+            if TRACE_LOGGING:
+                logger.debug("Adding new correlated measurement for site %s:\n%s" % (site, new_measurement.to_s()))
             # add the new measurement to the list of new measurements
             new_measurements.append(new_measurement)
 
@@ -1056,8 +1142,8 @@ def add_rainfall_interval_measurement(
         elif measurement_timestamp > target_timestamp:
             if TRACE_LOGGING:
                 logger.debug(
-                    "Rainfall measurement at %s does not correlate to cosmo/cnvhydro measurement.\nfirst: %s\nsecond: %s" %
-                    (target_timestamp, first_rainfall_measurement, second_rainfall_measurement))
+                    "Rainfall measurement at %s does not correlate to cosmo/cnvhydro measurement for site %s:\nfirst: %s\nsecond: %s" %
+                    (target_timestamp, site, first_rainfall_measurement, second_rainfall_measurement))
 
             # we're past the target timestamp of a sorted list, then there's no correlation
             # use a break so we add a new measurement if measurements is empty
@@ -1185,6 +1271,8 @@ def collect_interval_data(db_config_filename, db_importer):
     # for multiple cosmo sites using the same cnv hydro site, the cnv hydro site is retrieved and stepped through
     # multiple times. this is preferable to caching the cnv hydro measurements (which can be very large) in memory
     for cosmo_site in COSMO_SITES:
+
+        print("Retrieving measurements for cosmo_site %s and associated hydrometrics data" % cosmo_site)
 
         # returns a partially sorted array of measurements
         # sql queries typically return results ordered by date in ASC order, and windowing is done from old to new
