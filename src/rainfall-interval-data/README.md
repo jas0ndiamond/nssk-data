@@ -23,8 +23,8 @@ cd src/rainfall-interval-data
 
 ---
 ## Notes
-* Datasets (especially CoSMo) will have gaps and drift.
-* Dataset must be rebuilt completely with every update to any dataset
+* Source datasets (especially CoSMo) will have gaps and drift.
+* This dataset must be rebuilt completely with every update to any dataset
   * Gaps could be plugged
   * Datasets update at different intervals, and won't be current to the same start/end dates
 * Rainfall data is combined into 10 minute intervals from 5-minute rainfall measurements.
