@@ -13,7 +13,8 @@ SELECT
   	MAX(CASE WHEN $DB.$COSMO_SITE.CharacteristicName = 'Temperature water' THEN $DB.$COSMO_SITE.ResultValue END) as TemperatureWater
 FROM $DB.$COSMO_SITE
 WHERE
-	($DB.$COSMO_SITE.ActivityStartDate >= '$COSMO_START_DATE' AND $DB.$COSMO_SITE.ActivityStartDate < '$COSMO_END_DATE')
+	CAST(CONCAT_WS(' ', $DB.$COSMO_SITE.ActivityStartDate, $DB.$COSMO_SITE.ActivityStartTime) as DATETIME) >= "$COSMO_START_DATETIME" AND
+    CAST(CONCAT_WS(' ', $DB.$COSMO_SITE.ActivityStartDate, $DB.$COSMO_SITE.ActivityStartTime) as DATETIME) < "$COSMO_END_DATETIME"
 GROUP BY
   	CosmoTimestamp
 ORDER BY
