@@ -880,7 +880,7 @@ def write_html_file():
             CSV_LINK=csv_file_link,
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_RAINFALL_INTERVAL_DATA[name],
-            DESC="Rainfall Event Data for site %s" % name,
+            DESC="Rainfall 10-minute Interval Data for site %s" % name,
             SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / BYTES_IN_MB),
             CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
         )
