@@ -57,6 +57,8 @@ NSSK_RAINFALL_EVENT_DATA_TIMESTAMP_FIELD = "CNV_FLOWWORKS_TIMESTAMP"
 
 NSSK_CNV_HYDROMETRIC_DB = "NSSK_CNV_HYDROMETRIC"
 
+NSSK_RAINFALL_INTERVAL_DATA_DB = "NSSK_RAINFALL_INTERVAL_DATA"
+
 NSSK_WATERRANGERS_DB = "NSSK_WATERRANGERS"
 NSSK_WATERRANGERS_TIMESTAMP_FIELD = "ObservedOn"
 
@@ -130,6 +132,11 @@ DUMP_FILES_CNV_HYDROMETRIC = {
 DUMP_FILES_CHLORIDE_ACUITY = {
     "WAGG01": "nssk_chloride_acuity.WAGG01.csv",
     "WAGG03": "nssk_chloride_acuity.WAGG03.csv"
+}
+
+DUMP_FILES_RAINFALL_INTERVAL_DATA = {
+    "WAGG01": "nssk_rainfall_interval_data.WAGG01.csv",
+    "WAGG03": "nssk_rainfall_interval_data.WAGG03.csv",
 }
 
 DUMP_FILES_WATERRANGERS = {
@@ -233,6 +240,10 @@ def run_dump(db_config_filename):
                     print("Dumping Rainfall Event Data Aggregate")
                     dump_rainfall_event_data_aggregate(cursor)
 
+                    # dump rainfall interval data
+                    print("Dumping Rainfall Interval Data")
+                    dump_rainfall_interval_data(cursor)
+
                     # dump cnv hydrometric
                     print("Dumping CNV Hydrometric")
                     dump_cnv_hydrometric_data(cursor)
@@ -253,6 +264,37 @@ def run_dump(db_config_filename):
         print("Error connecting to database", e)
 
     return success
+
+def dump_rainfall_interval_data(cursor):
+    for site in DUMP_FILES_RAINFALL_INTERVAL_DATA:
+        # manually write header
+        cursor.execute("describe %s.%s" % (NSSK_RAINFALL_INTERVAL_DATA_DB, site))
+        rows = cursor.fetchall()
+
+        query_template = Template(open("templates/sql/rainfall-interval-data.sql.template").read())
+
+        schema = []
+        for row in rows:
+            schema.append(row[0])
+
+        # dump table contents
+        with (open(TEMP_DIR + DUMP_FILES_RAINFALL_INTERVAL_DATA[site], 'w') as writer):
+            csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
+            csv_writer.writerow(schema)
+
+            query = query_template.substitute(
+                DB=NSSK_RAINFALL_INTERVAL_DATA_DB,
+                SITE=site
+            )
+
+            # print("Query: %s" % query)
+            cursor.execute(query)
+
+            rows = cursor.fetchmany(FETCH_SIZE)
+
+            while rows is not None and rows:
+                csv_writer.writerows(rows)
+                rows = cursor.fetchmany(FETCH_SIZE)
 
 def dump_cnv_flowworks(cursor):
     for site in DUMP_FILES_CNV_FLOWWORKS:
@@ -339,6 +381,7 @@ def dump_cosmo(cursor):
                 rows = cursor.fetchmany(FETCH_SIZE)
 
 def dump_conductivity_rainfall_correlation(cursor):
+
     for site in DUMP_FILES_CONDUCTIVITY_RAINFALL_CORRELATION:
         # manually write header
         cursor.execute("describe %s.%s" % (NSSK_CONDUCTIVITY_RAINFALL_CORRELATION_DB, site))
@@ -580,6 +623,9 @@ def zip_dump_files():
     for site in DUMP_FILES_RAINFALL_EVENT_DATA_AGGREGATE:
         zip_dump_file(DUMP_FILES_RAINFALL_EVENT_DATA_AGGREGATE[site])
 
+    for site in DUMP_FILES_RAINFALL_INTERVAL_DATA:
+        zip_dump_file(DUMP_FILES_RAINFALL_INTERVAL_DATA[site])
+
     for site in DUMP_FILES_CNV_HYDROMETRIC:
         zip_dump_file(DUMP_FILES_CNV_HYDROMETRIC[site])
 
@@ -816,6 +862,34 @@ def write_html_file():
     )
 
     ##########
+    # Rainfall Interval Data
+    rainfall_interval_data_section_body = ""
+    for name in DUMP_FILES_RAINFALL_INTERVAL_DATA:
+        csv_file = DUMP_FILES_RAINFALL_INTERVAL_DATA[name]
+        zip_file = "%s.zip" % DUMP_FILES_RAINFALL_INTERVAL_DATA[name]
+
+        # file in the work dir (./tmp/file.csv)
+        file_in_dist = "%s/%s" % (TEMP_DIR, csv_file)
+
+        # http links to files deployed on webserver (./file.csv, ./file.csv.zip)
+        zip_file_link = "./%s" % zip_file
+        csv_file_link = "./%s" % csv_file
+
+        rainfall_interval_data_section_body += resource_entry_template.substitute(
+            FILE=csv_file,
+            CSV_LINK=csv_file_link,
+            ZIP_LINK=zip_file_link,
+            NAME=DUMP_FILES_RAINFALL_INTERVAL_DATA[name],
+            DESC="Rainfall Event Data for site %s" % name,
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / BYTES_IN_MB),
+            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
+        )
+
+    rainfall_interval_data_section_block = section_block_template.substitute(
+        SECTION_BODY=rainfall_interval_data_section_body
+    )
+
+    ##########
     # CNV Hydrometric
 
     cnv_hydrometric_section_body = ""
@@ -909,6 +983,7 @@ def write_html_file():
         RAINFALL_EVENTS_BLOCK=rainfall_events_section_block,
         RAINFALL_EVENT_DATA_BLOCK=rainfall_event_data_section_block,
         RAINFALL_EVENT_DATA_AGGREGATE_BLOCK=rainfall_event_data_aggregate_section_block,
+        RAINFALL_INTERVAL_DATA_BLOCK=rainfall_interval_data_section_block,
         CNV_HYDROMETRIC_BLOCK=cnv_hydrometric_section_block,
         CHLORIDE_ACUITY_BLOCK=chloride_acuity_section_body,
         WATERRANGERS_BLOCK=waterrangers_section_block
