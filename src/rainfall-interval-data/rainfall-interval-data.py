@@ -805,19 +805,7 @@ def correlate_rainfall_data(prelim_measurements, cosmo_site, cnv_flowworks_site,
                         cnv_flowworks_block_end_datetime = (
                                 cnv_flowworks_inc + datetime.timedelta(seconds=CNV_FLOWWORKS_SCAN_INCREMENT))
 
-                        # retrieve the cnv flowworks data for the corresponding date range, +/- CORRELATION_WINDOW
 
-                        # TODO: there are overlaps here. confirm this is expected
-#2025-11-16 01:14:46,756 [DEBUG] -- [__main__]-[correlate_rainfall_data]: Starting scan of WAGG01 block 2022-03-19 23:55:00 => 2022-04-03 00:05:00
-#2025-11-16 01:14:47,380 [DEBUG] -- [__main__]-[correlate_rainfall_data]: Starting scan of WAGG01 block 2022-04-02 23:55:00 => 2022-04-17 00:05:00
-#2025-11-16 01:14:48,003 [DEBUG] -- [__main__]-[correlate_rainfall_data]: Starting scan of WAGG01 block 2022-04-16 23:55:00 => 2022-05-01 00:05:00
-
-                        # TODO: this is a problem, fix
-                        #
-                        # cnv_flowworks_block_start_time = cnv_flowworks_block_start_date - datetime.timedelta(
-                        #     seconds=CNV_FLOWWORKS_CORRELATION_WINDOW)
-                        # cnv_flowworks_block_end_time = cnv_flowworks_block_end_date + datetime.timedelta(
-                        #     seconds=CNV_FLOWWORKS_CORRELATION_WINDOW)
 
                         cnv_flowworks_block_measurements_sql = cnv_flowworks_measurements_query_template.substitute(
                             DB=SOURCE_DB_CNV_FLOWWORKS,
