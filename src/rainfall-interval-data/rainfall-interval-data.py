@@ -1078,8 +1078,11 @@ def add_rainfall_interval_measurement(
         second_rainfall_measurement = first_rainfall_measurement
         first_rainfall_measurement = temp
 
+    # the earlier rainfall timestamp is considered the middle of the interval
+    # a rainfall measurement is the rainfall amount recorded in the previous 5 minutes
     target_timestamp = first_rainfall_measurement[0]
 
+    # we're adding the rainfall amount to something, so record it outside the loop
     interval_rainfall_amt = float(first_rainfall_measurement[1]) + float(second_rainfall_measurement[1])
 
     # search the measurements list for a measurement
