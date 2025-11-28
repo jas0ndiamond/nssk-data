@@ -3,3 +3,4 @@ mysql-connector==2.2.9
 mysql-connector-python==9.2.0
 requests==2.32.3
 argparse
+xlsxwriter
