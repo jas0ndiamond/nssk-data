@@ -136,7 +136,7 @@ class DBImporter:
 
         self.inserts.append(statement)
 
-        # TODO call execute if inserts grows to large
+        # TODO call execute if inserts grows too large
 
     # dump our inserts. for debugging
     def dump(self):
