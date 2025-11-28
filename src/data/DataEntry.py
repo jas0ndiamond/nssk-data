@@ -24,7 +24,7 @@ class DataEntry:
         # [ #$%[]{},"'| ]
 
         # TODO: make static
-        scrub_pattern = re.compile(r'[\[\]\'\"\$\#\@\!\{\}\,\|]')
+        scrub_pattern = re.compile(r'[\[\]\'\"$#@!{},|]')
 
         # set internal state from entry_obj
         for field in entry_obj:
