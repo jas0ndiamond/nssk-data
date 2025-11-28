@@ -1,6 +1,6 @@
 from sqlite3 import Cursor
 
-from mysql.connector import connect, Error, IntegrityError
+from mysql.connector import connect, Error
 import datetime
 from string import Template
 
@@ -175,23 +175,14 @@ def precheck(conf_file):
                         # check that destination table is empty
                         cursor.reset()
                         cursor.execute(
-                            "SELECT EXISTS(SELECT 1 FROM %s.%s LIMIT 1) AS is_not_empty;" % (target_db, sensor))
+                            "SELECT EXISTS(SELECT 1 FROM %s.%s LIMIT 1) AS is_not_empty;" % (target_db, sensor)
+                        )
                         if cursor.fetchone()[0]:
-                            # TODO: we have write access to insert, should also be able to drop. for now just throw an exception
-                            # add a -f flag to shell args, if not present, prompt for user confirmation to proceed with drop
-                            #raise PrecheckFailedException("Destination table %s.%s is not empty." % (target_db, sensor))
-
                             logger.debug("Truncating destination table %s.%s" % (target_db, sensor))
 
                             cursor.execute("truncate table %s.%s" % (target_db, sensor))
                         else:
                             logger.debug("Destination table %s.%s is empty. Proceeding." % (target_db, sensor))
-
-                    # target database validated. cache database name, so we can reference when running the correlation
-                    # TODO: necessary?
-                    global TARGET_DATABASE
-                    TARGET_DATABASE = target_db
-
             except Error as e:
                 logger.error("Error checking databases", e)
                 raise
@@ -206,18 +197,19 @@ def get_cosmo_measurements_date_window(cursor, sensor_name):
     # determine cosmo start datetime (earliest conductivity measurement)
     # cosmo datetimes are split across date and time fields
 
-    # TODO move this and other template reads to precheck
+    # TODO move this and other template reads to precheck. file existence check should not happen this late
     cosmo_date_search_template = Template(open("sql/get-cosmo-timestamp.sql.template").read())
     cosmo_date_search_sql = cosmo_date_search_template.substitute(DB=SOURCE_DB_NSSK_COSMO, SITE=sensor_name,
                                                                   ORDER="ASC")
-
-    logger.debug("cosmo start date search sql:\n%s" % cosmo_date_search_sql)
+    if TRACE_LOGGING:
+        logger.debug("cosmo start date search sql:\n%s" % cosmo_date_search_sql)
 
     cursor.execute(cosmo_date_search_sql)
     row = cursor.fetchall()
     if cursor.rowcount == 1:
         # expect date in mysq datetime format
-        print("raw start datetime: %s" % row[0][0])
+        if TRACE_LOGGING:
+            logger.debug("raw start datetime: %s" % row[0][0])
 
         # pprint(row[0])
 
@@ -472,10 +464,6 @@ def collect_cosmo_and_cnvhydro_measurements(cosmo_site_name, cnv_hydro_site_name
                             COSMO_SITE=cosmo_site_name,
                             COSMO_START_DATETIME=cosmo_block_start_datetime,
                             COSMO_END_DATETIME=cosmo_block_end_datetime
-                            # COSMO_START_DATE=cosmo_block_start_datetime.date(),
-                            # COSMO_END_DATE=cosmo_block_end_datetime.date(),
-                            # COSMO_START_TIME=cosmo_block_start_datetime.time(),
-                            # COSMO_END_TIME=cosmo_block_end_datetime.time()
                         )
 
                         cnv_hydrometric_block_measurements_sql = cnv_hydrometric_measurements_query_template.substitute(
@@ -683,11 +671,6 @@ def collect_cosmo_and_cnvhydro_measurements(cosmo_site_name, cnv_hydro_site_name
                     print("%s" % log_msg, flush=True)
                     logger.info(log_msg)
 
-
-                    ##################################
-                    # TODO: add any preceding or trailing cnv hydrometric data
-                    # Still accurate/needed?
-
                     ##################################
                     # consolidate measurements from our component measurements
                     # cosmo_measurements, cnv_hydro_measurements, correlated_measurements
@@ -805,8 +788,6 @@ def correlate_rainfall_data(prelim_measurements, cosmo_site, cnv_flowworks_site,
                         cnv_flowworks_block_end_datetime = (
                                 cnv_flowworks_inc + datetime.timedelta(seconds=CNV_FLOWWORKS_SCAN_INCREMENT))
 
-
-
                         cnv_flowworks_block_measurements_sql = cnv_flowworks_measurements_query_template.substitute(
                             DB=SOURCE_DB_CNV_FLOWWORKS,
                             SITE=cnv_flowworks_site,
@@ -814,21 +795,21 @@ def correlate_rainfall_data(prelim_measurements, cosmo_site, cnv_flowworks_site,
                             CNV_FLOWWORKS_END_DATETIME=cnv_flowworks_block_end_datetime
                         )
 
+                        logger.debug("Starting scan of cnv flowworks %s block %s => %s" % (
+                            cosmo_site,
+                            cnv_flowworks_block_start_datetime,
+                            cnv_flowworks_block_end_datetime)
+                        )
+
                         if TRACE_LOGGING:
-                            logger.debug("Starting scan of cnv flowworks %s block %s => %s" % (
-                                cosmo_site,
-                                cnv_flowworks_block_start_datetime,
-                                cnv_flowworks_block_end_datetime)
-                            )
+                            logger.debug("Retrieving CNV Flowworks measurement block with query:\n%s",
+                                         cnv_flowworks_block_measurements_sql)
 
                         ###########
                         # retrieve and process cnv flowworks measurements for block
 
                         # how do we tack an orphaned last element onto the next processing block?
                         # => maintain a trailing_rainfall_measurement reference
-
-                        logger.debug("Retrieving CNV Flowworks measurement block with query:\n%s",
-                                     cnv_flowworks_block_measurements_sql)
 
                         cursor.execute(cnv_flowworks_block_measurements_sql)
 
@@ -837,9 +818,6 @@ def correlate_rainfall_data(prelim_measurements, cosmo_site, cnv_flowworks_site,
                         # with fetchall we can jump around more easily
                         rows = cursor.fetchall()
 
-                        # TODO: get the measurement subset for the block here. delete from original 'measurements' list
-                        # do we only want measurements within this interval? => think so
-                        # do not want overlap
                         block_measurements = get_block_prelim_measurements(
                             prelim_measurements,
                             cnv_flowworks_block_start_datetime,
@@ -1050,7 +1028,7 @@ def add_rainfall_interval_measurement(
         site: str,
         measurements: list[RainfallIntervalDataEntry],
         new_measurements: list[RainfallIntervalDataEntry]
-) -> list[RainfallIntervalDataEntry]:
+) -> None:
     """
     We have a pair of rainfall measurements, compute the 10minute rainfall total, and add to the known measurements.
     Consider air temperature and baro pressure from the first measurement. These don't typically change much over
@@ -1270,7 +1248,6 @@ def collect_interval_data(db_config_filename, db_importer):
         # essentially a flat array of sorted cosmo-only, sorted cnv-hydro-only, and sorted composite
         # need everything sorted by which date fields are present
 
-        # TODO: dict of mapping?? -> maybe it's fine as a list
         prelim_measurements = collect_cosmo_and_cnvhydro_measurements(cosmo_site, SOURCE_DB_CNV_HYDROMETRICS_SITE,
                                                                       db_config_filename)
 
