@@ -34,7 +34,7 @@ TRACE_LOGGING = True
 # time window to search for a corresponding conductivity value
 # +/- 2 minutes. in seconds
 # cnv hydrometrics measurements are every 5 minutes
-# TODO: what changes if the measurement frequency changes
+# adjust with any changes to rainfall measurement frequency
 CNV_HYDROMETRIC_CORRELATION_WINDOW = 2 * 60
 
 # time window for two summed 5-min rainfall measurements, to be correlated with existing cosmo/cnv hydro measurements
@@ -101,7 +101,7 @@ SCHEMA = [
 
 MYSQL_DATE_FMT = "%Y-%m-%d %H:%M:%S"
 
-# TODO: use these and implement in other importers as warranted
+# TODO: use these and implement in other importers as warranted as a project-wide constant
 ORDER_ASC = "ASC"
 ORDER_DESC = "DESC"
 
