@@ -1,0 +1,10 @@
+SELECT
+	$DB.$SITE.MeasurementTimestamp as CNVFlowworksTimestamp,
+  	$DB.$SITE.Rainfall as Rainfall,
+  	$DB.$SITE.BarometricPressure as BarometricPressure,
+  	$DB.$SITE.AirTemperature as AirTemperature
+FROM $DB.$SITE
+WHERE
+    $DB.$SITE.MeasurementTimestamp >= "$CNV_FLOWWORKS_START_DATETIME" AND $DB.$SITE.MeasurementTimestamp < "$CNV_FLOWWORKS_END_DATETIME"
+ORDER BY
+  	CNVFlowworksTimestamp ASC;

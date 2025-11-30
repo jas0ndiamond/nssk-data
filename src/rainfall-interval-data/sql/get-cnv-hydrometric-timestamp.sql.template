@@ -1,0 +1,1 @@
+select MeasurementTimeStamp from NSSK_CNV_HYDROMETRIC.$SITE order by MeasurementTimeStamp $ORDER limit 1;

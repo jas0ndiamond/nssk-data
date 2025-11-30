@@ -1,20 +1,22 @@
 # dump database tables into csv files, zip up for deployment onto nssk.jas0n.ca
-import re
+import argparse
+import csv
+import os
 import shutil
+import sys
 import zipfile
+from datetime import datetime
 from os.path import exists
+from pathlib import Path
 from string import Template
 from time import strftime, localtime
 # dist html page
 # links to each zipped html file
 # link to zip file containing all other zip files
 from zipfile import ZipFile
-import argparse
-import csv
-import sys
-import os
+
 from mysql.connector import connect, Error
-from pathlib import Path
+from xlsxwriter import Workbook
 
 path_root = Path(__file__).parents[2]
 sys.path.append(str(path_root))
@@ -57,6 +59,8 @@ NSSK_RAINFALL_EVENT_DATA_TIMESTAMP_FIELD = "CNV_FLOWWORKS_TIMESTAMP"
 
 NSSK_CNV_HYDROMETRIC_DB = "NSSK_CNV_HYDROMETRIC"
 
+NSSK_RAINFALL_INTERVAL_DATA_DB = "NSSK_RAINFALL_INTERVAL_DATA"
+
 NSSK_WATERRANGERS_DB = "NSSK_WATERRANGERS"
 NSSK_WATERRANGERS_TIMESTAMP_FIELD = "ObservedOn"
 
@@ -81,7 +85,6 @@ DUMP_FILES_DNV_FLOWWORKS = {
 }
 
 # dump file for each CoSMo site
-
 DUMP_FILES_COSMO = {
     "HAST01": "nssk_cosmo.HAST01.csv",
     "HAST02": "nssk_cosmo.HAST02.csv",
@@ -130,6 +133,24 @@ DUMP_FILES_CNV_HYDROMETRIC = {
 DUMP_FILES_CHLORIDE_ACUITY = {
     "WAGG01": "nssk_chloride_acuity.WAGG01.csv",
     "WAGG03": "nssk_chloride_acuity.WAGG03.csv"
+}
+
+DUMP_FILES_RAINFALL_INTERVAL_DATA = {
+    "WAGG01": "nssk_rainfall_interval_data.WAGG01.csv",
+    "WAGG03": "nssk_rainfall_interval_data.WAGG03.csv",
+}
+
+DUMP_FILES_RAINFALL_INTERVAL_SINCE_JULY2024_DATA = {
+    "WAGG01": "nssk_rainfall_interval_data.sinceJuly2024.WAGG01.csv",
+    "WAGG03": "nssk_rainfall_interval_data.sinceJuly2024.WAGG03.csv",
+}
+
+XLSX_RAINFALL_INTERVAL_DATA = {
+    "All": "nssk_rainfall_interval_data.all.xlsx",
+}
+
+XLSX_RAINFALL_INTERVAL_SINCE_JULY2024_DATA = {
+    "All": "nssk_rainfall_interval_data.sinceJuly2024.all.xlsx",
 }
 
 DUMP_FILES_WATERRANGERS = {
@@ -233,6 +254,14 @@ def run_dump(db_config_filename):
                     print("Dumping Rainfall Event Data Aggregate")
                     dump_rainfall_event_data_aggregate(cursor)
 
+                    # dump rainfall interval data
+                    print("Dumping Rainfall Interval Data")
+                    dump_rainfall_interval_data(cursor)
+
+                    # dump rainfall interval data
+                    print("Dumping Rainfall Interval Data - Since July 2024")
+                    dump_rainfall_interval_since_july2024_data(cursor)
+
                     # dump cnv hydrometric
                     print("Dumping CNV Hydrometric")
                     dump_cnv_hydrometric_data(cursor)
@@ -254,6 +283,222 @@ def run_dump(db_config_filename):
 
     return success
 
+def dump_rainfall_interval_data(cursor):
+    for site in DUMP_FILES_RAINFALL_INTERVAL_DATA:
+        query_template = Template(open("templates/sql/rainfall-interval-data.sql.template").read())
+
+        cursor.execute("describe %s.%s" % (NSSK_RAINFALL_INTERVAL_DATA_DB, site))
+
+        schema = []
+        for row in  cursor.fetchall():
+            schema.append(row[0])
+
+        csv_file = TEMP_DIR + DUMP_FILES_RAINFALL_INTERVAL_DATA[site]
+
+        print("\tWriting file %s" % csv_file)
+
+        # dump table contents
+        with (open(csv_file, 'w') as writer):
+            csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
+
+            # write our schema
+            csv_writer.writerow(schema)
+
+            query = query_template.substitute(
+                DB=NSSK_RAINFALL_INTERVAL_DATA_DB,
+                SITE=site
+            )
+
+            # print("Query: %s" % query)
+            cursor.execute(query)
+
+            rows = cursor.fetchmany(FETCH_SIZE)
+
+            # write csv file
+            while rows is not None and rows:
+                csv_writer.writerows(rows)
+                rows = cursor.fetchmany(FETCH_SIZE)
+
+    #########################################
+    # all sites processed, create the consolidated xlsx file out of the component csv files
+    # each site name should span all columns
+    # time series data all side by side. no correlation across sites
+    ######### Site 1 ############|######### Site 2 ############|
+    # site1-field1,site1-field2,site1-field3,site2-field1,site2-field2,site2-field3
+    # ...
+    # will not be parsable csv
+
+    interval_data_file_consolidated = TEMP_DIR + XLSX_RAINFALL_INTERVAL_DATA["All"]
+
+    workbook = Workbook(interval_data_file_consolidated)
+    worksheet = workbook.add_worksheet()
+
+    start_col = 0
+    column_buffer = 6
+
+    header_format = workbook.add_format({
+        'bold': True,
+        'align': 'center',
+        'valign': 'vcenter',
+        'bg_color': '#D7E4BC',
+        'border': 1
+    })
+
+    gap_format = workbook.add_format({'bg_color': 'black'})
+
+    for site in DUMP_FILES_RAINFALL_INTERVAL_DATA:
+        csv_file = TEMP_DIR + DUMP_FILES_RAINFALL_INTERVAL_DATA[site]
+
+        print("\tMerging in file %s to xlsx %s" % (csv_file, interval_data_file_consolidated))
+
+        # Open CSV to read header row only (first line)
+        with open(csv_file, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            headers = next(reader)
+
+            cols_per_file = len(headers)  # Number of columns in each CSV
+
+        # Merge header to span all columns in each csv file schema
+        worksheet.merge_range(0, start_col, 0, start_col + cols_per_file - 1, f'{site}',
+                              header_format)
+
+        # Write header row with formatting
+        for c, header in enumerate(headers):
+            worksheet.write(1, start_col + c, header, header_format)
+            # Set column width based on header length (with minimum)
+            col_width = max(len(header)+ column_buffer, 10)
+            worksheet.set_column(start_col + c, start_col + c, col_width)
+
+        # Reopen CSV to stream data rows without loading full file
+        with open(csv_file, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            next(reader)  # Skip header row
+            for r, row in enumerate(reader, start=2):
+                for c, value in enumerate(row):
+                    worksheet.write(r, start_col + c, value)
+
+        # Fill the gap column after CSV data columns with black background
+        gap_col = start_col + cols_per_file
+        # Calculate the number of rows to fill (assuming minimum 2 header rows + data rows)
+        num_rows = r if 'r' in locals() else 2  # fallback if no data rows
+
+        for row_num in range(num_rows + 1):  # +1 for 0-based row count including header row 0
+            worksheet.write_blank(row_num, gap_col, None, gap_format)
+
+        start_col += cols_per_file + 1  # Move start column for next CSV, with 1 column gap
+
+    workbook.close()
+    print("\tCombined XLSX file created: %s" % interval_data_file_consolidated)
+
+def dump_rainfall_interval_since_july2024_data(cursor):
+    for site in DUMP_FILES_RAINFALL_INTERVAL_SINCE_JULY2024_DATA:
+        query_template = Template(open("templates/sql/rainfall-interval-data-timebound.sql.template").read())
+
+        cursor.execute("describe %s.%s" % (NSSK_RAINFALL_INTERVAL_DATA_DB, site))
+
+        schema = []
+        for row in  cursor.fetchall():
+            schema.append(row[0])
+
+        csv_file = TEMP_DIR + DUMP_FILES_RAINFALL_INTERVAL_SINCE_JULY2024_DATA[site]
+
+        print("\tWriting file %s" % csv_file)
+
+        # dump table contents
+        with (open(csv_file, 'w') as writer):
+            csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
+
+            # write our schema
+            csv_writer.writerow(schema)
+
+            query = query_template.substitute(
+                DB=NSSK_RAINFALL_INTERVAL_DATA_DB,
+                SITE=site,
+                START_DATETIME="2024-07-01 00:00:00",
+                END_DATETIME=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            )
+
+            # print("Query: %s" % query)
+            cursor.execute(query)
+
+            rows = cursor.fetchmany(FETCH_SIZE)
+
+            # write csv file
+            while rows is not None and rows:
+                csv_writer.writerows(rows)
+                rows = cursor.fetchmany(FETCH_SIZE)
+
+    #########################################
+    # all sites processed, create the consolidated xlsx file out of the component csv files
+    # each site name should span all columns
+    # time series data all side by side. no correlation across sites
+    ######### Site 1 ############|######### Site 2 ############|
+    # site1-field1,site1-field2,site1-field3,site2-field1,site2-field2,site2-field3
+    # ...
+    # will not be parsable csv
+
+    interval_data_file_consolidated = TEMP_DIR + XLSX_RAINFALL_INTERVAL_SINCE_JULY2024_DATA["All"]
+
+    workbook = Workbook(interval_data_file_consolidated)
+    worksheet = workbook.add_worksheet()
+
+    start_col = 0
+    column_buffer = 6
+
+    header_format = workbook.add_format({
+        'bold': True,
+        'align': 'center',
+        'valign': 'vcenter',
+        'bg_color': '#D7E4BC',
+        'border': 1
+    })
+
+    gap_format = workbook.add_format({'bg_color': 'black'})
+
+    for site in DUMP_FILES_RAINFALL_INTERVAL_SINCE_JULY2024_DATA:
+        csv_file = TEMP_DIR + DUMP_FILES_RAINFALL_INTERVAL_SINCE_JULY2024_DATA[site]
+
+        print("\tMerging in file %s to xlsx %s" % (csv_file, interval_data_file_consolidated))
+
+        # Open CSV to read header row only (first line)
+        with open(csv_file, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            headers = next(reader)
+
+            cols_per_file = len(headers)  # Number of columns in each CSV
+
+        # Merge header to span all columns in each csv file schema
+        worksheet.merge_range(0, start_col, 0, start_col + cols_per_file - 1, f'{site}',
+                              header_format)
+
+        # Write header row with formatting
+        for c, header in enumerate(headers):
+            worksheet.write(1, start_col + c, header, header_format)
+            # Set column width based on header length (with minimum)
+            col_width = max(len(header)+ column_buffer, 10)
+            worksheet.set_column(start_col + c, start_col + c, col_width)
+
+        # Reopen CSV to stream data rows without loading full file
+        with open(csv_file, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            next(reader)  # Skip header row
+            for r, row in enumerate(reader, start=2):
+                for c, value in enumerate(row):
+                    worksheet.write(r, start_col + c, value)
+
+        # Fill the gap column after CSV data columns with black background
+        gap_col = start_col + cols_per_file
+        # Calculate the number of rows to fill (assuming minimum 2 header rows + data rows)
+        num_rows = r if 'r' in locals() else 2  # fallback if no data rows
+
+        for row_num in range(num_rows + 1):  # +1 for 0-based row count including header row 0
+            worksheet.write_blank(row_num, gap_col, None, gap_format)
+
+        start_col += cols_per_file + 1  # Move start column for next CSV, with 1 column gap
+
+    workbook.close()
+    print("\tCombined XLSX file created: %s" % interval_data_file_consolidated)
+
 def dump_cnv_flowworks(cursor):
     for site in DUMP_FILES_CNV_FLOWWORKS:
         # manually write header
@@ -264,8 +509,12 @@ def dump_cnv_flowworks(cursor):
         for row in rows:
             schema.append(row[0])
 
+        csv_file = TEMP_DIR + DUMP_FILES_CNV_FLOWWORKS[site]
+
+        print("\tWriting file %s" % csv_file)
+
         # dump table contents
-        with (open(TEMP_DIR + DUMP_FILES_CNV_FLOWWORKS[site], 'w') as writer):
+        with (open(csv_file, 'w') as writer):
             csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
             csv_writer.writerow(schema)
 
@@ -290,8 +539,12 @@ def dump_dnv_flowworks(cursor):
         for row in rows:
             schema.append(row[0])
 
+        csv_file = TEMP_DIR + DUMP_FILES_DNV_FLOWWORKS[site]
+
+        print("\tWriting file %s" % csv_file)
+
         # dump table contents
-        with (open(TEMP_DIR + DUMP_FILES_DNV_FLOWWORKS[site], 'w') as writer):
+        with (open(csv_file, 'w') as writer):
             csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
             csv_writer.writerow(schema)
 
@@ -319,8 +572,12 @@ def dump_cosmo(cursor):
         for row in rows:
             schema.append(row[0])
 
+        csv_file = TEMP_DIR + DUMP_FILES_COSMO[site]
+
+        print("\tWriting file %s" % csv_file)
+
         # dump table contents
-        with (open(TEMP_DIR + DUMP_FILES_COSMO[site], 'w') as writer):
+        with (open(csv_file, 'w') as writer):
             csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
             csv_writer.writerow(schema)
 
@@ -339,6 +596,7 @@ def dump_cosmo(cursor):
                 rows = cursor.fetchmany(FETCH_SIZE)
 
 def dump_conductivity_rainfall_correlation(cursor):
+
     for site in DUMP_FILES_CONDUCTIVITY_RAINFALL_CORRELATION:
         # manually write header
         cursor.execute("describe %s.%s" % (NSSK_CONDUCTIVITY_RAINFALL_CORRELATION_DB, site))
@@ -348,8 +606,12 @@ def dump_conductivity_rainfall_correlation(cursor):
         for row in rows:
             schema.append(row[0])
 
+        csv_file = TEMP_DIR + DUMP_FILES_CONDUCTIVITY_RAINFALL_CORRELATION[site]
+
+        print("\tWriting file %s" % csv_file)
+
         # dump table contents
-        with (open("%s%s" % (TEMP_DIR, DUMP_FILES_CONDUCTIVITY_RAINFALL_CORRELATION[site]), 'w') as writer):
+        with (open(csv_file, 'w') as writer):
             csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
             csv_writer.writerow(schema)
 
@@ -377,8 +639,12 @@ def dump_rainfall_events(cursor):
     for row in rows:
         schema.append(row[0])
 
+    csv_file = TEMP_DIR + DUMP_FILES_RAINFALL_EVENTS["CNV"]
+
+    print("\tWriting file %s" % csv_file)
+
     # dump table contents
-    with (open("%s%s" % (TEMP_DIR, DUMP_FILES_RAINFALL_EVENTS["CNV"]), 'w') as writer):
+    with (open(csv_file, 'w') as writer):
         csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
         csv_writer.writerow(schema)
 
@@ -409,8 +675,12 @@ def dump_rainfall_event_data(cursor):
         for row in rows:
             schema.append(row[0])
 
+        csv_file = TEMP_DIR + DUMP_FILES_RAINFALL_EVENT_DATA[site]
+
+        print("\tWriting file %s" % csv_file)
+
         # dump table contents
-        with (open("%s%s" % (TEMP_DIR, DUMP_FILES_RAINFALL_EVENT_DATA[site]), 'w') as writer):
+        with (open(csv_file, 'w') as writer):
             csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
             csv_writer.writerow(schema)
 
@@ -446,8 +716,12 @@ def dump_rainfall_event_data_aggregate(cursor):
             "TotalFlow"
         ]
 
+        csv_file = TEMP_DIR + DUMP_FILES_RAINFALL_EVENT_DATA_AGGREGATE[site]
+
+        print("\tWriting file %s" % csv_file)
+
         # dump table contents
-        with (open(TEMP_DIR + DUMP_FILES_RAINFALL_EVENT_DATA_AGGREGATE[site], 'w') as writer):
+        with (open(csv_file, 'w') as writer):
             csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
             csv_writer.writerow(schema)
 
@@ -476,8 +750,12 @@ def dump_waterrangers(cursor):
         for row in rows:
             schema.append(row[0])
 
+        csv_file = TEMP_DIR + DUMP_FILES_WATERRANGERS[site]
+
+        print("\tWriting file %s" % csv_file)
+
         # dump table contents
-        with (open("%s%s" % (TEMP_DIR, DUMP_FILES_WATERRANGERS[site]), 'w') as writer):
+        with (open(csv_file, 'w') as writer):
             csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
             csv_writer.writerow(schema)
 
@@ -508,8 +786,12 @@ def dump_cnv_hydrometric_data(cursor):
         for row in rows:
             schema.append(row[0])
 
+        csv_file = TEMP_DIR + DUMP_FILES_CNV_HYDROMETRIC[site]
+
+        print("\tWriting file %s" % csv_file)
+
         # dump table contents
-        with (open(TEMP_DIR + DUMP_FILES_CNV_HYDROMETRIC[site], 'w') as writer):
+        with (open(csv_file, 'w') as writer):
             csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
             csv_writer.writerow(schema)
 
@@ -536,8 +818,12 @@ def dump_chloride_acuity(cursor):
         # the query is hardcoded, so hardcode the schema
         schema = ["CosmoTimestamp","Specific_Conductance","Temperature_Water","Water_Level"]
 
+        csv_file = TEMP_DIR + DUMP_FILES_CHLORIDE_ACUITY[site]
+
+        print("\tWriting file %s" % csv_file)
+
         # dump table contents
-        with (open(TEMP_DIR + DUMP_FILES_CHLORIDE_ACUITY[site], 'w') as writer):
+        with (open(csv_file, 'w') as writer):
             csv_writer = csv.writer(writer, quoting=csv.QUOTE_ALL)
             csv_writer.writerow(schema)
 
@@ -580,6 +866,11 @@ def zip_dump_files():
     for site in DUMP_FILES_RAINFALL_EVENT_DATA_AGGREGATE:
         zip_dump_file(DUMP_FILES_RAINFALL_EVENT_DATA_AGGREGATE[site])
 
+    for site in DUMP_FILES_RAINFALL_INTERVAL_DATA:
+        zip_dump_file(DUMP_FILES_RAINFALL_INTERVAL_DATA[site])
+
+    # TODO: rainfall interval data consolidated
+
     for site in DUMP_FILES_CNV_HYDROMETRIC:
         zip_dump_file(DUMP_FILES_CNV_HYDROMETRIC[site])
 
@@ -608,7 +899,8 @@ def zip_dump_file(dump_file):
 def write_html_file():
     html_template = Template(open("templates/index.html.template").read())
 
-    resource_entry_template = Template(open("templates/resource-entry.template.html").read())
+    csventry_template = Template(open("templates/csv-entry.template.html").read())
+    xlsxentry_template = Template(open("templates/xlsx-entry.template.html").read())
     section_block_template = Template(open("templates/section-block.html.template").read())
 
     ##########
@@ -627,9 +919,9 @@ def write_html_file():
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
-        cnv_flowworks_section_body += resource_entry_template.substitute(
+        cnv_flowworks_section_body += csventry_template.substitute(
             FILE=csv_file,
-            CSV_LINK=csv_file_link,
+            RESOURCE_LINK=csv_file_link,
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_CNV_FLOWWORKS[name],
             DESC="CNV Flowworks data",
@@ -642,7 +934,7 @@ def write_html_file():
     )
 
     ##########
-    # dnv whitewater
+    # dnv flowworks
 
     dnv_flowworks_section_body = ""
     for name in DUMP_FILES_DNV_FLOWWORKS:
@@ -657,9 +949,9 @@ def write_html_file():
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
-        dnv_flowworks_section_body += resource_entry_template.substitute(
+        dnv_flowworks_section_body += csventry_template.substitute(
             FILE=csv_file,
-            CSV_LINK=csv_file_link,
+            RESOURCE_LINK=csv_file_link,
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_DNV_FLOWWORKS[name],
             DESC="DNV Flowworks data",
@@ -686,9 +978,9 @@ def write_html_file():
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
-        cosmo_section_body += resource_entry_template.substitute(
+        cosmo_section_body += csventry_template.substitute(
             FILE=csv_file,
-            CSV_LINK=csv_file_link,
+            RESOURCE_LINK=csv_file_link,
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_COSMO[name],
             DESC="CoSMo DFO data for site %s" % name,
@@ -715,9 +1007,9 @@ def write_html_file():
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
-        conductivity_rainfall_correlation_section_body += resource_entry_template.substitute(
+        conductivity_rainfall_correlation_section_body += csventry_template.substitute(
             FILE=csv_file,
-            CSV_LINK=csv_file_link,
+            RESOURCE_LINK=csv_file_link,
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_CONDUCTIVITY_RAINFALL_CORRELATION[name],
             DESC="C/R for CoSMo Site %s" % name,
@@ -744,9 +1036,9 @@ def write_html_file():
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
-        rainfall_events_section_body += resource_entry_template.substitute(
+        rainfall_events_section_body += csventry_template.substitute(
             FILE=csv_file,
-            CSV_LINK=csv_file_link,
+            RESOURCE_LINK=csv_file_link,
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_RAINFALL_EVENTS[name],
             DESC="Rainfall Events for %s" % name,
@@ -772,9 +1064,9 @@ def write_html_file():
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
-        rainfall_event_data_section_body += resource_entry_template.substitute(
+        rainfall_event_data_section_body += csventry_template.substitute(
             FILE=csv_file,
-            CSV_LINK=csv_file_link,
+            RESOURCE_LINK=csv_file_link,
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_RAINFALL_EVENT_DATA[name],
             DESC="Rainfall Event Data for site %s" % name,
@@ -801,9 +1093,9 @@ def write_html_file():
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
-        rainfall_event_data_aggregate_section_body += resource_entry_template.substitute(
+        rainfall_event_data_aggregate_section_body += csventry_template.substitute(
             FILE=csv_file,
-            CSV_LINK=csv_file_link,
+            RESOURCE_LINK=csv_file_link,
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_RAINFALL_EVENT_DATA_AGGREGATE[name],
             DESC="Rainfall Event Aggregate values for site %s" % name,
@@ -813,6 +1105,105 @@ def write_html_file():
 
     rainfall_event_data_aggregate_section_block = section_block_template.substitute(
         SECTION_BODY=rainfall_event_data_aggregate_section_body
+    )
+
+    ##########
+    # Rainfall Interval Data
+    rainfall_interval_data_section_body = ""
+
+    # dump files
+    for name in DUMP_FILES_RAINFALL_INTERVAL_DATA:
+        csv_file = DUMP_FILES_RAINFALL_INTERVAL_DATA[name]
+        zip_file = "%s.zip" % DUMP_FILES_RAINFALL_INTERVAL_DATA[name]
+
+        # file in the work dir (./tmp/file.csv)
+        file_in_dist = "%s/%s" % (TEMP_DIR, csv_file)
+
+        # http links to files deployed on webserver (./file.csv, ./file.csv.zip)
+        zip_file_link = "./%s" % zip_file
+        csv_file_link = "./%s" % csv_file
+
+        rainfall_interval_data_section_body += csventry_template.substitute(
+            FILE=csv_file,
+            RESOURCE_LINK=csv_file_link,
+            ZIP_LINK=zip_file_link,
+            NAME=DUMP_FILES_RAINFALL_INTERVAL_DATA[name],
+            DESC="Rainfall 10-minute Interval Data for site %s" % name,
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / BYTES_IN_MB),
+            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
+        )
+
+    # xlsx files
+    for name in XLSX_RAINFALL_INTERVAL_DATA:
+        xlsx_file = XLSX_RAINFALL_INTERVAL_DATA[name]
+
+        # file in the work dir (./tmp/file.csv)
+        file_in_dist = "%s/%s" % (TEMP_DIR, xlsx_file)
+
+        # http links to files deployed on webserver (./file.csv, ./file.csv.zip)
+        xlsx_file_link = "./%s" % xlsx_file
+
+        rainfall_interval_data_section_body += xlsxentry_template.substitute(
+            FILE=xlsx_file,
+            RESOURCE_LINK=xlsx_file_link,
+            NAME=XLSX_RAINFALL_INTERVAL_DATA[name],
+            DESC="Rainfall 10-minute Interval Data for site %s" % name,
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / BYTES_IN_MB),
+            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
+    )
+
+    rainfall_interval_data_section_block = section_block_template.substitute(
+        SECTION_BODY=rainfall_interval_data_section_body
+    )
+
+    ##########
+    # Rainfall Interval Data - since july 2024
+
+    rainfall_interval_data_since_july2024_section_body = ""
+
+    # dump files
+    for name in DUMP_FILES_RAINFALL_INTERVAL_SINCE_JULY2024_DATA:
+        csv_file = DUMP_FILES_RAINFALL_INTERVAL_SINCE_JULY2024_DATA[name]
+        zip_file = "%s.zip" % DUMP_FILES_RAINFALL_INTERVAL_SINCE_JULY2024_DATA[name]
+
+        # file in the work dir (./tmp/file.csv)
+        file_in_dist = "%s/%s" % (TEMP_DIR, csv_file)
+
+        # http links to files deployed on webserver (./file.csv, ./file.csv.zip)
+        zip_file_link = "./%s" % zip_file
+        csv_file_link = "./%s" % csv_file
+
+        rainfall_interval_data_since_july2024_section_body += csventry_template.substitute(
+            FILE=csv_file,
+            RESOURCE_LINK=csv_file_link,
+            ZIP_LINK=zip_file_link,
+            NAME=DUMP_FILES_RAINFALL_INTERVAL_SINCE_JULY2024_DATA[name],
+            DESC="Rainfall 10-minute Interval Data for site %s since July 2024" % name,
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / BYTES_IN_MB),
+            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
+        )
+
+    # xlsx files
+    for name in XLSX_RAINFALL_INTERVAL_SINCE_JULY2024_DATA:
+        xlsx_file = XLSX_RAINFALL_INTERVAL_SINCE_JULY2024_DATA[name]
+
+        # file in the work dir (./tmp/file.csv)
+        file_in_dist = "%s/%s" % (TEMP_DIR, xlsx_file)
+
+        # http links to files deployed on webserver (./file.csv, ./file.csv.zip)
+        xlsx_file_link = "./%s" % xlsx_file
+
+        rainfall_interval_data_since_july2024_section_body += xlsxentry_template.substitute(
+            FILE=xlsx_file,
+            RESOURCE_LINK=xlsx_file_link,
+            NAME=XLSX_RAINFALL_INTERVAL_SINCE_JULY2024_DATA[name],
+            DESC="Rainfall 10-minute Interval Data for site %s since July 2024" % name,
+            SIZE="%.3f MB" % (os.path.getsize(file_in_dist) / BYTES_IN_MB),
+            CREATION_DATE=strftime('%Y-%m-%d %H:%M:%S', localtime(os.path.getctime(file_in_dist)))
+    )
+
+    rainfall_interval_data_since_july2024_section_block = section_block_template.substitute(
+        SECTION_BODY=rainfall_interval_data_since_july2024_section_body
     )
 
     ##########
@@ -830,9 +1221,9 @@ def write_html_file():
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
-        cnv_hydrometric_section_body += resource_entry_template.substitute(
+        cnv_hydrometric_section_body += csventry_template.substitute(
             FILE=csv_file,
-            CSV_LINK=csv_file_link,
+            RESOURCE_LINK=csv_file_link,
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_CNV_HYDROMETRIC[name],
             DESC="CNV Hydrometric Data for site %s" % name,
@@ -858,9 +1249,9 @@ def write_html_file():
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
-        chloride_acuity_section_body += resource_entry_template.substitute(
+        chloride_acuity_section_body += csventry_template.substitute(
             FILE=csv_file,
-            CSV_LINK=csv_file_link,
+            RESOURCE_LINK=csv_file_link,
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_CHLORIDE_ACUITY[name],
             DESC="Chloride Acuity data for site %s" % name,
@@ -886,9 +1277,9 @@ def write_html_file():
         zip_file_link = "./%s" % zip_file
         csv_file_link = "./%s" % csv_file
 
-        waterrangers_section_body += resource_entry_template.substitute(
+        waterrangers_section_body += csventry_template.substitute(
             FILE=csv_file,
-            CSV_LINK=csv_file_link,
+            RESOURCE_LINK=csv_file_link,
             ZIP_LINK=zip_file_link,
             NAME=DUMP_FILES_WATERRANGERS[name],
             DESC="Waterrangers data for site %s" % name,
@@ -909,6 +1300,8 @@ def write_html_file():
         RAINFALL_EVENTS_BLOCK=rainfall_events_section_block,
         RAINFALL_EVENT_DATA_BLOCK=rainfall_event_data_section_block,
         RAINFALL_EVENT_DATA_AGGREGATE_BLOCK=rainfall_event_data_aggregate_section_block,
+        RAINFALL_INTERVAL_DATA_BLOCK=rainfall_interval_data_section_block,
+        RAINFALL_INTERVAL_DATA_SINCE_JULY2024_BLOCK=rainfall_interval_data_since_july2024_section_block,
         CNV_HYDROMETRIC_BLOCK=cnv_hydrometric_section_block,
         CHLORIDE_ACUITY_BLOCK=chloride_acuity_section_body,
         WATERRANGERS_BLOCK=waterrangers_section_block
@@ -942,6 +1335,9 @@ def create_dist():
     # assemble zip file from tmp dir
     with ZipFile("./%s" % DIST_FILE, 'w', zipfile.ZIP_DEFLATED) as zip_h:
         for root, dirs, files in os.walk(TEMP_DIR):
+            dirs.sort()
+            # Sort files for cleaner output and debugging
+            files.sort()
             for file in files:
                 print("Adding file to distribution: %s" % file)
                 zip_h.write("%s/%s" % (TEMP_DIR, file), arcname="./%s" % file)

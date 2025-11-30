@@ -66,7 +66,13 @@ class DBImporter:
 
         # check if a schema or schema mapping is defined
         if self.schema is None or len(self.schema) <= 0:
-            raise "Database schema must be defined"
+            raise Exception("Database schema must be defined for entry")
+
+        # where the entry will go in the database
+        entry_dest = entry.get_db_destination()
+
+        if entry_dest is None:
+            raise Exception("Database destination table must be defined for entry")
 
         statement = "INSERT INTO"
 
@@ -124,13 +130,13 @@ class DBImporter:
         # entry fields
 
         # get the table to store the entry
-        table = entry.get_db_destination()
+        table = entry_dest
 
         statement += (" " + table + " " + fields_segment + values_segment)
 
         self.inserts.append(statement)
 
-        # TODO call execute if inserts grows to large
+        # TODO call execute if inserts grows too large
 
     # dump our inserts. for debugging
     def dump(self):
@@ -197,23 +203,23 @@ class DBImporter:
                                 # Arguments: (IntegrityError(1062, "1062 (23000): Duplicate entry
                                 # '2019-06-12-10:00:00-Temperature, water' for key 'WAGG01.PRIMARY'", '23000'),
                                 # )
-                                if " Duplicate entry " in e.args[1] and " for key " in e.args[1]:
+                                message = str(e.args[1])
+
+                                if " Duplicate entry " in message and " for key " in message:
 
                                     self.logger.warning(
-                                        "Attempted to insert duplicate row:\n%s\nContinuing..." % insert)
+                                        "Attempted to insert duplicate row:\n%s\nmessage: %s\nContinuing..." % (insert, message))
                                     duplicate_count += 1
 
                                     duplicates.append(insert)
                                 else:
                                     # problem but not a duplicate row
-                                    raise e
-                            except Error as e:
-                                self.logger.warning("Error running an insert:\n%s\nContinuing...\n" % insert)
-                                self.logger.warning(e)
+                                    self.logger.warning("Error running an insert:\n%s\nmessage: %s\nContinuing...\n" % (insert, message))
+                                    self.logger.warning(e)
 
-                                errors.append(insert)
+                                    errors.append(insert)
 
-                                error_count += 1
+                                    error_count += 1
 
                             print("\r\t%d / %d (%d duplicates, %d errors)" %
                                   (insert_count, total_inserts, duplicate_count, error_count),
