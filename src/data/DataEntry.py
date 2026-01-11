@@ -51,7 +51,7 @@ class DataEntry:
 
     def _validate_data(self, entry_obj):
         # require override, even if the overrider just returns true
-        raise RuntimeError("DataEntry._is_valid not implemented in subclass")
+        raise RuntimeError("DataEntry._validate_data not implemented in subclass")
 
     def get_db_destination(self):
         raise RuntimeError("DataEntry.get_db_destination not implemented in subclass")
