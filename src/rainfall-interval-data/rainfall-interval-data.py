@@ -864,6 +864,8 @@ def collect_cosmo_and_cnvhydro_measurements(cosmo_site_name, cnv_hydro_site_name
                                      "exists tallying uncorrelated cnv hydro measurements:"
                                      f"{cnv_hydro_measurements[measurement_key].to_s()}")
                                 )
+
+                                # TODO: examine changing log level here and above
                                 log.error(msg)
                                 # print(msg)
 
@@ -921,7 +923,7 @@ def collect_cosmo_and_cnvhydro_measurements(cosmo_site_name, cnv_hydro_site_name
                     print("Sorted preliminary measurements completed in %.3f sec" % sorting_elapsed_time)
 
                     correlation_processing_elapsed_time = (timeit.default_timer() - correlation_processing_start_time)
-                    log_msg = "Completed correlation Processing in %.3f sec" % correlation_processing_elapsed_time
+                    log_msg = "Completed CoSMo/CNV Hydrometric correlation processing in %.3f sec" % correlation_processing_elapsed_time
                     print("\n%s" % log_msg, flush=True)
                     log.info(log_msg)
 
@@ -1348,12 +1350,19 @@ def correlate_rainfall_intervals(prelim_measurements, cosmo_site, cnv_flowworks_
                         # existence of a trailing measurement should not affect this, so long as the mysql query is
                         # exclusive of the block end datetime
                         cnv_flowworks_inc = cnv_flowworks_inc + timedelta(seconds=CNV_FLOWWORKS_SCAN_INCREMENT)
+
+                correlation_processing_elapsed_time = (timeit.default_timer() - correlation_processing_start_time)
+                log_msg = "Completed rainfall interval correlation processing in %.3f sec" % correlation_processing_elapsed_time
+                print("\n%s" % log_msg, flush=True)
+                log.info(log_msg)
             except Error as e:
                 log.error("Error checking databases", exc_info=True)
                 raise e
     except Error as e:
         log.error("Error connecting to database", exc_info=True)
         raise e
+
+
 
     ##########################
     # form our set of correlated and uncorrelated measurements
