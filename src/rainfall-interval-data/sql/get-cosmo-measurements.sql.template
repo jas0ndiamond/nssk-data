@@ -3,7 +3,9 @@
 
 # aliases should match with schema fields in RainfallIntervalDataEntry
 
-# mysql "BETWEEN" is inclusive of both dates/datetimes, dont use so we dont complicate stepping through the blocks
+# mysql "BETWEEN" is inclusive of both dates/datetimes- dont use so we dont complicate stepping through the blocks
+
+# either conductivity measurements or temperature water measurements can be missing but not both
 
 # must be sorted ASC
 
@@ -17,5 +19,7 @@ WHERE
     CAST(CONCAT_WS(' ', $DB.$COSMO_SITE.ActivityStartDate, $DB.$COSMO_SITE.ActivityStartTime) as DATETIME) < "$COSMO_END_DATETIME"
 GROUP BY
   	CosmoTimestamp
+HAVING
+    Conductivity IS NOT NULL OR TemperatureWater IS NOT NULL
 ORDER BY
   	CosmoTimestamp ASC;

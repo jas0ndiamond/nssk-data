@@ -80,15 +80,14 @@ class RainfallIntervalDataEntry(DataEntry):
 
         if RainfallIntervalDataEntry.COSMO_TIMESTAMP_FIELD in fields:
 
-            # TODO: robust timestamp precedence
-
             has_timestamp_defined = True
+
+            # problem if both conductivity and water temperature are None. should be excluded by db query
             if RainfallIntervalDataEntry.COSMO_CONDUCTIVITY_FIELD not in fields and RainfallIntervalDataEntry.COSMO_TEMPERATURE_WATER_FIELD not in fields:
                 raise DataValidationException("CoSMo measurement missing both conductivity and temperature water measurements")
-            if fields[RainfallIntervalDataEntry.COSMO_CONDUCTIVITY_FIELD] is None:
-                raise DataValidationException("CoSMo measurement has None conductivity")
-            if fields[RainfallIntervalDataEntry.COSMO_TEMPERATURE_WATER_FIELD] is None:
-                raise DataValidationException("CoSMo measurement has None temperature")
+            if (fields[RainfallIntervalDataEntry.COSMO_CONDUCTIVITY_FIELD] is None
+                    and fields[RainfallIntervalDataEntry.COSMO_TEMPERATURE_WATER_FIELD] is None):
+                raise DataValidationException("CoSMo measurements conductivity and water temperature both are None")
 
             if self._set_timestamp(fields[RainfallIntervalDataEntry.COSMO_TIMESTAMP_FIELD]):
                 has_valid_timestamp = True
