@@ -44,6 +44,8 @@ cd src/rainfall-interval-data
 ## Implementation
 * Source measurement datasets can be large, and will continue to grow. Iterate over database tables in time blocks, so we're not putting 500k rows in memory that won't be read frequently enough.
 * Tables are truncated at the start of each run, due to divergent updates and gaps in the source datasets.
+* Full runs may appear to stall on the console when processing large blocks of uncorrelated CoSMo/CNV Hydrometric measurements. Progress is visible in the logs.
+  * A block has correlated measurements tallied first, then uncorrelated CoSMo measurements, then uncorrelated CNV Hydromeasurements.
 
 ---
 ## Outputs
