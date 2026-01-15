@@ -184,20 +184,19 @@ class RainfallIntervalDataEntry(DataEntry):
         pass
 
     def set(self, field_name, value) -> None:
-        # TODO: if field_name is a timestamp field, need to revalidate and set timestamp/timestamp_str accordingly
+
+        # TODO: stopgap- really need to validate before calling set
+        # expect a validationexception either way
+
+        super().set(field_name, value)
+
+        # revalidate to process any validation logic from expected fields
         if field_name in [
             RainfallIntervalDataEntry.COSMO_TIMESTAMP_FIELD,
             RainfallIntervalDataEntry.CNV_HYDROMETRIC_TIMESTAMP_FIELD,
-            RainfallIntervalDataEntry.CNV_FLOWWORKS_RAINFALL_END_TIMESTAMP_FIELD
+            RainfallIntervalDataEntry.CNV_FLOWWORKS_RAINFALL_START_TIMESTAMP_FIELD
         ]:
-            # validate and set timestamp/timestamp_str
-            # TODO: start here
-
-            pass
-
-            # self._validate_data(self.entry_data)
-        else:
-            super().set(field_name, value)
+            self._validate_data(self.entry_data)
 
     # TODO: add to DataEntry
     def copy(self):
