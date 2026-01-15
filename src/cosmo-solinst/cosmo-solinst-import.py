@@ -450,7 +450,7 @@ def main(parsed_args):
                 # push object into collection
                 # log collection at end to file
 
-                logger.error("Error constructing CosmoDataEntry", e)
+                logger.error("Error constructing CosmoDataEntry when processing row %s" % row, e)
 
                 invalid_rows.append(row)
                 invalid_row_count += 1

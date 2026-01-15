@@ -20,7 +20,8 @@ Compile rainfall amounts at 10-minute intervals from the 5-minute rainfall measu
   * This rainfall measurement is the middle of the realtime measurement interval. 
 * If several CNV Hydrometric measurements correlate to a single cosmo measurement, the earliest CNV Hydrometric measurement is considered the correlated measurement. 
   * This scenario is unlikely given current measurement frequencies.
-* Interval data is determined for CoSMo sites WAGG01, WAGG03, and consolidated (all).
+* Interval data is determined for CoSMo sites WAGG01, WAGG03.
+  * Also a consolidated (all) view in xlsx workbooks.
 * Although CNV Flowworks rainfall measurements are typically in 5-minute intervals, it is not guaranteed that one measurement is followed by another measurements 5 minutes later.
   * Factors include drift, de-calibration, or other availability problems.
   * Site can go offline, then begin recording at a skewed interval.
@@ -42,6 +43,9 @@ cd src/rainfall-interval-data
 ---
 ## Implementation
 * Source measurement datasets can be large, and will continue to grow. Iterate over database tables in time blocks, so we're not putting 500k rows in memory that won't be read frequently enough.
+* Tables are truncated at the start of each run, due to divergent updates and gaps in the source datasets.
+* Full runs may appear to stall on the console when processing large blocks of uncorrelated CoSMo/CNV Hydrometric measurements. Progress is visible in the logs.
+  * A block has correlated measurements tallied first, then uncorrelated CoSMo measurements, then uncorrelated CNV Hydromeasurements.
 
 ---
 ## Outputs

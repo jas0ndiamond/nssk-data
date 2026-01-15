@@ -1,4 +1,4 @@
-from mysql.connector import connect, Error, IntegrityError
+from mysql.connector import connect, Error, IntegrityError, DataError
 
 from datetime import datetime
 
@@ -213,13 +213,22 @@ class DBImporter:
 
                                     duplicates.append(insert)
                                 else:
-                                    # problem but not a duplicate row
-                                    self.logger.warning("Error running an insert:\n%s\nmessage: %s\nContinuing...\n" % (insert, message))
+                                    # integrityerror but not a duplicate row
+                                    self.logger.warning("IntegrityError running an insert:\n%s\nmessage: %s\nContinuing...\n" % (insert, message))
                                     self.logger.warning(e)
 
                                     errors.append(insert)
 
                                     error_count += 1
+
+                            except DataError as e:
+                                self.logger.warning(
+                                    "DataError running an insert:\n%s\nmessage: %s\nContinuing...\n" % (insert, message))
+                                self.logger.warning(e)
+
+                                errors.append(insert)
+
+                                error_count += 1
 
                             print("\r\t%d / %d (%d duplicates, %d errors)" %
                                   (insert_count, total_inserts, duplicate_count, error_count),
