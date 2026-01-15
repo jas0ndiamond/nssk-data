@@ -146,58 +146,79 @@ def precheck(conf_file):
                     # SHOW DATABASES LIKE "NSSK_CONDUCTIVITY_RAINFALL_CORRELATION";
 
                     # NSSK_CONDUCTIVITY_RAINFALL_CORRELATION target database
-                    cursor.execute("SHOW DATABASES LIKE '%s';" % target_db)
+                    cursor.execute(f"SHOW DATABASES LIKE '{target_db}';")
 
                     cursor.fetchall()
 
                     if cursor.rowcount != 1:
-                        raise PrecheckFailedException("Could not find %s target database" % target_db)
+                        raise PrecheckFailedException(f"Could not find {target_db} target database")
                     else:
-                        log.debug("Found target database %s" % target_db)
+                        log.debug(f"Found target database {target_db}")
 
                     # nssk cosmo source database
                     cursor.reset()
-                    cursor.execute("SHOW DATABASES LIKE '%s';" % SOURCE_DB_NSSK_COSMO)
+                    cursor.execute(f"SHOW DATABASES LIKE '{SOURCE_DB_NSSK_COSMO}';")
                     cursor.fetchall()
 
                     if cursor.rowcount != 1:
-                        raise PrecheckFailedException("Could not find source database %s" % SOURCE_DB_NSSK_COSMO)
+                        raise PrecheckFailedException(f"Could not find source database {SOURCE_DB_NSSK_COSMO}")
                     else:
-                        log.debug("Found source database %s" % SOURCE_DB_NSSK_COSMO)
+                        log.debug(f"Found source database {SOURCE_DB_NSSK_COSMO}")
 
                     # cnv rainfall source database
                     cursor.reset()
-                    cursor.execute("SHOW DATABASES LIKE '%s';" % SOURCE_DB_CNV_FLOWWORKS)
+                    cursor.execute(f"SHOW DATABASES LIKE '{SOURCE_DB_CNV_FLOWWORKS}';")
                     cursor.fetchall()
 
                     if cursor.rowcount != 1:
-                        raise PrecheckFailedException("Could not find source database %s" % SOURCE_DB_CNV_FLOWWORKS)
+                        raise PrecheckFailedException(f"Could not find source database {SOURCE_DB_CNV_FLOWWORKS}" )
                     else:
-                        log.debug("Found source database %s" % SOURCE_DB_CNV_FLOWWORKS)
+                        log.debug(f"Found source database {SOURCE_DB_CNV_FLOWWORKS}")
 
                     # check that a table for each sensor exists
                     for sensor in COSMO_SITES:
-                        log.debug("Precheck Cosmo sensor site %s" % sensor)
+                        log.debug(f"Precheck Cosmo sensor site {target_db}.{sensor}")
 
                         cursor.reset()
-                        cursor.execute("SHOW TABLES LIKE '%s';" % sensor)
+                        # cursor.execute(f"use {target_db};")
+                        # cursor.execute(f"SHOW TABLES LIKE '{target_db}.{sensor}';")
+                        cursor.execute((
+                            "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES " 
+                            f"WHERE TABLE_SCHEMA='{target_db}' AND TABLE_NAME LIKE '{sensor}';"
+                        ))
+
                         cursor.fetchall()
                         if cursor.rowcount != 1:
-                            raise PrecheckFailedException("Could not find sensor table %s in target database" % sensor)
+                            raise PrecheckFailedException(f"Could not find sensor table {target_db}.{sensor} in target database")
                         else:
                             log.debug(f"Found Sensor Table {sensor}")
 
                         # check that destination table is empty
                         cursor.reset()
-                        cursor.execute(
-                            "SELECT EXISTS(SELECT 1 FROM %s.%s LIMIT 1) AS is_not_empty;" % (target_db, sensor)
-                        )
-                        if cursor.fetchone()[0]:
-                            log.debug("Truncating destination table %s.%s" % (target_db, sensor))
 
-                            cursor.execute("truncate table %s.%s" % (target_db, sensor))
+                        # returns int 1 if not empty, and int 0 if empty
+                        is_empty_query = f"SELECT EXISTS(SELECT 1 FROM {target_db}.{sensor} LIMIT 1) AS is_not_empty;"
+                        #is_empty_query = f"SELECT (SELECT COUNT(*) FROM {target_db}.{sensor} ) > 0 AS is_not_empty;"
+                        cursor.execute(is_empty_query)
+                        result = cursor.fetchone()[0]
+                        cursor.reset()
+                        if result == 1:
+                            log.debug(f"Truncating destination table {target_db}.{sensor}: {result}")
+
+                            cursor.execute(f"truncate table {target_db}.{sensor}")
+
+                            # check that truncate succeeded and table is empty
+                            cursor.execute(is_empty_query)
+                            result = cursor.fetchone()[0]
+                            if result == 0:
+                                log.debug(f"Destination table {target_db}.{sensor} is empty: {result}. Proceeding.")
+                            else:
+                                raise PrecheckFailedException((
+                                    f"Table {target_db}.{sensor} is not empty after truncation. "
+                                    f"result: {result}"
+                                ))
                         else:
-                            log.debug("Destination table %s.%s is empty. Proceeding." % (target_db, sensor))
+                            log.debug(f"Destination table {target_db}.{sensor} is empty: {result}. Proceeding.")
 
                 log.info("Precheck Passed!")
             except Error as e:
@@ -1196,13 +1217,10 @@ def correlate_rainfall_intervals(prelim_measurements, cosmo_site, cnv_flowworks_
                                 # yes => place in results, continue loop (jump to next iteration, None out trailing_rainfall_measurement)
                                 # no => continue execution, try same with next element in rows
 
-                                # TODO: vvvv
                                 # if trailing_rainfall_measurement is valid, but too far away from row[i], we need to
                                 # either consider row[i] and row[i+1] or ****re-set the trailing measurement and continue
                                 # the loop
 
-                                # TODO: need a way of signaling not to jump two indices when using the trailing
-                                #  measurement.
                                 # ***************************
 
                                 first_rainfall_measurement = list(trailing_rainfall_measurement)
@@ -1432,15 +1450,8 @@ def add_rainfall_interval_measurement(
 
         measurement_timestamp = measurement.get_timestamp()
 
-        ########################################
-        # TODO: resolve, should cut down on the last of the duplicates
-        # check if we've already processed this due to window boundary issues
-        # could be a cnv hydro measurement, or cosmo, or both
-        # if new_measurements
-        #     log.debug("Skipping...already have seen this measurement")
-        #     return
+        #########################################
 
-        # TODO: robustly constrain what timestamp we're correlating
 
         # is the measurement timestamp close enough in time to the rainfall timestamp?
         if abs((measurement_timestamp - target_timestamp).total_seconds()) < RAINFALL_CORRELATION_THRESHOLD:
@@ -1459,16 +1470,44 @@ def add_rainfall_interval_measurement(
             # schema guarantees rainfall, airtemp, baro pressure
             # rainfall is summed, air temp and baro pressure taken from first measurement as they don't change much over
             # 5 minutes
-            new_measurement.set(RainfallIntervalDataEntry.CNV_FLOWWORKS_RAINFALL_START_TIMESTAMP_FIELD,
-                                first_rainfall_measurement[0])
-            new_measurement.set(RainfallIntervalDataEntry.CNV_FLOWWORKS_RAINFALL_END_TIMESTAMP_FIELD,
-                                second_rainfall_measurement[0])
+
+
             new_measurement.set(RainfallIntervalDataEntry.CNV_FLOWWORKS_RAINFALL_AMT_FIELD, interval_rainfall_amt)
             new_measurement.set(RainfallIntervalDataEntry.CNV_FLOWWORKS_BARO_PRESSURE_FIELD,
                                 first_rainfall_measurement[2])
             new_measurement.set(RainfallIntervalDataEntry.CNV_FLOWWORKS_AIR_TEMPERATURE_FIELD,
                                 first_rainfall_measurement[3])
 
+            new_measurement.set(RainfallIntervalDataEntry.CNV_FLOWWORKS_RAINFALL_START_TIMESTAMP_FIELD,
+                                first_rainfall_measurement[0])
+            new_measurement.set(RainfallIntervalDataEntry.CNV_FLOWWORKS_RAINFALL_END_TIMESTAMP_FIELD,
+                                second_rainfall_measurement[0])
+
+
+
+
+
+            ########################################
+            # TODO: resolve, should cut down on the last of the duplicates
+            # check if we've already processed this due to window boundary issues
+            # could be a cnv hydro measurement, or cosmo, or both
+            # if new_measurements
+            #     log.debug("Skipping...already have seen this measurement")
+            #     return
+
+            # does the measurement timestamp exist in our processed timestamps?
+            # TODO: look at refactoring new_measurements into a dict, if manual scan cuts down on the last duplicates
+            found_it = False
+            for processed_measurement in new_measurements:
+                if new_measurement.get_timestamp_str() == processed_measurement.get_timestamp_str():
+                    found_it = True
+                    break
+
+            if found_it:
+                log.info(f"Already saw measurement {new_measurement.to_s()}. Skipping...")
+
+                # already processed this measurement earlier, so bail out of adding it
+                return
 
             log.debug(f"Adding new correlated measurement for site {site}:\n{new_measurement.to_s()}")
             # add the new measurement to the list of new measurements
@@ -1477,6 +1516,7 @@ def add_rainfall_interval_measurement(
             # delete the original measurement
             # only expect a single correlation, and to cut down on search space
             del measurements[measurement_i]
+
 
             return
         elif measurement_timestamp > latest_valid_measurement_datetime:
@@ -1506,12 +1546,27 @@ def add_rainfall_interval_measurement(
             RainfallIntervalDataEntry.CNV_FLOWWORKS_AIR_TEMPERATURE_FIELD: first_rainfall_measurement[3]
         })
 
+    # does the measurement timestamp exist in our processed timestamps?
+    # TODO: look at refactoring new_measurements into a dict, if manual scan cuts down on the last duplicates
+    found_it = False
+    for processed_measurement in new_measurements:
+        if rainfall_data_measurement.get_timestamp_str() == processed_measurement.get_timestamp_str():
+            found_it = True
+            break
+
+    if found_it:
+        log.info(f"Already saw measurement {rainfall_data_measurement.to_s()}. Skipping...")
+
+        # already processed this measurement earlier, so bail out of adding it
+        return
+
+    log.debug(
+        f"Adding uncorrelated rainfall measurement for site {site}:\n{rainfall_data_measurement.to_s()}"
+    )
+
     new_measurements.append(rainfall_data_measurement)
 
-    if TRACE_LOGGING:
-        log.debug(
-            f"Adding uncorrelated rainfall measurement for site {site}:\n{rainfall_data_measurement.to_s()}"
-        )
+
 
     return
 
