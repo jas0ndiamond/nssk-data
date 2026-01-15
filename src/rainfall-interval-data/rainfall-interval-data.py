@@ -34,10 +34,10 @@ logging.getLogger("DBImporter").setLevel(logging.INFO)
 TRACE_LOGGING = False
 
 # set these for testing specific date intervals, as the full dataset takes a long time
-#OVERRIDE_START_DATETIME = None
-#OVERRIDE_END_DATETIME = None
-OVERRIDE_START_DATETIME = "2024-01-01 00:00:00"
-OVERRIDE_END_DATETIME = "2024-04-30 00:00:00"
+OVERRIDE_START_DATETIME = None
+OVERRIDE_END_DATETIME = None
+#OVERRIDE_START_DATETIME = "2024-01-01 00:00:00"
+#OVERRIDE_END_DATETIME = "2024-04-30 00:00:00"
 
 
 # time window to search for a corresponding conductivity value
@@ -909,11 +909,11 @@ def collect_cosmo_and_cnvhydro_measurements(cosmo_site_name, cnv_hydro_site_name
                     # all blocks are finished processing
 
                     # print out of how many measurements we found
-                    log_msg = f"Total cosmo measurement count: {len(cosmo_measurements.values())}"
+                    log_msg = f"Total cosmo measurement count: {len(cosmo_measurements.keys())}"
                     print("%s" % log_msg, flush=True)
                     log.info(log_msg)
 
-                    log_msg = f"Total cnv hydrometric measurement count: {len(cnv_hydro_measurements.values())}"
+                    log_msg = f"Total cnv hydrometric measurement count: {len(cnv_hydro_measurements.keys())}"
                     print("%s" % log_msg, flush=True)
                     log.info(log_msg)
 
@@ -959,7 +959,7 @@ def collect_cosmo_and_cnvhydro_measurements(cosmo_site_name, cnv_hydro_site_name
 
 
 def correlate_rainfall_intervals(prelim_measurements, cosmo_site, cnv_flowworks_site, db_config_filename
-                                 ) -> list[RainfallIntervalDataEntry]:
+                                 ) -> dict[str, RainfallIntervalDataEntry]:
     """
     Assemble 10-minute rainfall intervals from the 5-minute measurements, and attempt to correlate them with the existing
     cosmo/cnv hydrometric measurements.
@@ -970,13 +970,13 @@ def correlate_rainfall_intervals(prelim_measurements, cosmo_site, cnv_flowworks_
     :return:
     """
     # the aggregate list of all processed measurements, correlated with rainfall intervals or not
-    final_measurements: list[RainfallIntervalDataEntry] = []
+    final_measurements: dict[str, RainfallIntervalDataEntry] = {}
 
     # measurements correlated with rainfall intervals
-    correlated_rainfall_measurements: list[RainfallIntervalDataEntry] = []
+    correlated_rainfall_measurements: dict[str, RainfallIntervalDataEntry] = {}
 
     # measurements correlated with rainfall intervals
-    uncorrelated_rainfall_measurements: list[RainfallIntervalDataEntry] = []
+    uncorrelated_rainfall_measurements: dict[str, RainfallIntervalDataEntry] = {}
 
     config = DBConfigFactory.build(db_config_filename)
 
@@ -1360,7 +1360,13 @@ def correlate_rainfall_intervals(prelim_measurements, cosmo_site, cnv_flowworks_
                             (len(block_measurements), initial_block_measurement_count)
                         )
 
-                        uncorrelated_rainfall_measurements.extend(block_measurements)
+                        for data_entry in block_measurements:
+                            ts_str = data_entry.get_timestamp_str()
+
+                            if ts_str not in uncorrelated_rainfall_measurements:
+                                uncorrelated_rainfall_measurements[ts_str] = data_entry
+                            else:
+                                log.warning(f"Skipping duplicate uncorrelated measurement at : {ts_str}")
 
                         # increment source block start time
                         # ensure overlapping time windows are managed by query, and here
@@ -1386,14 +1392,14 @@ def correlate_rainfall_intervals(prelim_measurements, cosmo_site, cnv_flowworks_
     # form our set of correlated and uncorrelated measurements
 
     # add measurements that do not correlate with 10-minute rainfall intervals to the final list
-    final_measurements.extend(uncorrelated_rainfall_measurements)
+    final_measurements |= uncorrelated_rainfall_measurements
 
     # add measurements that do correlate with 10-minute rainfall intervals to the final list
-    for new_measurement in correlated_rainfall_measurements:
+    for timestamp, new_measurement in correlated_rainfall_measurements.items():
         if TRACE_LOGGING:
-            log.debug("Adding new correlated measurement: %s", new_measurement.to_s())
+            log.debug(f"Adding new correlated measurement at {timestamp}: {new_measurement.to_s()}")
         new_measurement.set_db_destination(cosmo_site)
-        final_measurements.append(new_measurement)
+        final_measurements[timestamp] = new_measurement
 
     return final_measurements
 
@@ -1403,7 +1409,7 @@ def add_rainfall_interval_measurement(
         second_rainfall_measurement: list,
         site: str,
         measurements: list[RainfallIntervalDataEntry],
-        new_measurements: list[RainfallIntervalDataEntry]
+        new_measurements: dict[str, RainfallIntervalDataEntry]
 ) -> None:
     """
     We have a pair of rainfall measurements, compute the 10minute rainfall total, and add to the known measurements.
@@ -1448,10 +1454,23 @@ def add_rainfall_interval_measurement(
     measurement_i = 0
     for measurement in measurements:
 
-        measurement_timestamp = measurement.get_timestamp()
+
+        measurement_timestamp_str = measurement.get_timestamp_str()
+
+        # i dont think this is right to do here. this is the block search space, and we want to determine if
+        # the rainfall measurement, correlated or not, is a duplicate of something we already have
+        #
+        # if measurement_timestamp_str in new_measurements:
+        #     log.warning(f"Skipping duplicate potential correlated measurement at : {measurement_timestamp_str}")
+        #     del measurements[measurement_i]
+        #
+        #     # mitigated by the del?
+        #     #measurement_i += 1
+        #
+        #     return
 
         #########################################
-
+        measurement_timestamp = measurement.get_timestamp()
 
         # is the measurement timestamp close enough in time to the rainfall timestamp?
         if abs((measurement_timestamp - target_timestamp).total_seconds()) < RAINFALL_CORRELATION_THRESHOLD:
@@ -1483,10 +1502,11 @@ def add_rainfall_interval_measurement(
             new_measurement.set(RainfallIntervalDataEntry.CNV_FLOWWORKS_RAINFALL_END_TIMESTAMP_FIELD,
                                 second_rainfall_measurement[0])
 
+            # copy() should set the db destination
 
 
 
-
+            # think this part is done with the conditional early in the loop
             ########################################
             # TODO: resolve, should cut down on the last of the duplicates
             # check if we've already processed this due to window boundary issues
@@ -1497,21 +1517,21 @@ def add_rainfall_interval_measurement(
 
             # does the measurement timestamp exist in our processed timestamps?
             # TODO: look at refactoring new_measurements into a dict, if manual scan cuts down on the last duplicates
-            found_it = False
-            for processed_measurement in new_measurements:
-                if new_measurement.get_timestamp_str() == processed_measurement.get_timestamp_str():
-                    found_it = True
-                    break
-
-            if found_it:
-                log.info(f"Already saw measurement {new_measurement.to_s()}. Skipping...")
-
-                # already processed this measurement earlier, so bail out of adding it
-                return
+            # found_it = False
+            # for processed_measurement in new_measurements:
+            #     if new_measurement.get_timestamp_str() == processed_measurement.get_timestamp_str():
+            #         found_it = True
+            #         break
+            #
+            # if found_it:
+            #     log.info(f"Already saw measurement {new_measurement.to_s()}. Skipping...")
+            #
+            #     # already processed this measurement earlier, so bail out of adding it
+            #     return
 
             log.debug(f"Adding new correlated measurement for site {site}:\n{new_measurement.to_s()}")
             # add the new measurement to the list of new measurements
-            new_measurements.append(new_measurement)
+            new_measurements[measurement_timestamp_str] = new_measurement
 
             # delete the original measurement
             # only expect a single correlation, and to cut down on search space
@@ -1548,24 +1568,27 @@ def add_rainfall_interval_measurement(
 
     # does the measurement timestamp exist in our processed timestamps?
     # TODO: look at refactoring new_measurements into a dict, if manual scan cuts down on the last duplicates
-    found_it = False
-    for processed_measurement in new_measurements:
-        if rainfall_data_measurement.get_timestamp_str() == processed_measurement.get_timestamp_str():
-            found_it = True
-            break
-
-    if found_it:
-        log.info(f"Already saw measurement {rainfall_data_measurement.to_s()}. Skipping...")
-
-        # already processed this measurement earlier, so bail out of adding it
-        return
+    # found_it = False
+    # for processed_measurement in new_measurements:
+    #     if rainfall_data_measurement.get_timestamp_str() == processed_measurement.get_timestamp_str():
+    #         found_it = True
+    #         break
+    #
+    # if found_it:
+    #     log.info(f"Already saw measurement {rainfall_data_measurement.to_s()}. Skipping...")
+    #
+    #     # already processed this measurement earlier, so bail out of adding it
+    #     return
 
     log.debug(
         f"Adding uncorrelated rainfall measurement for site {site}:\n{rainfall_data_measurement.to_s()}"
     )
 
-    new_measurements.append(rainfall_data_measurement)
-
+    ts_str = rainfall_data_measurement.get_timestamp_str()
+    if ts_str not in new_measurements:
+        new_measurements[ts_str] = rainfall_data_measurement
+    else:
+        log.warning(f"Skipping adding duplicate uncorrelated rainfall measurement {rainfall_data_measurement.to_s()}")
 
 
     return
@@ -1666,7 +1689,7 @@ def collect_interval_data(db_config_filename, db_importer):
 
         #################################################
         # add measurements to importer
-        for measurement in final_measurements:
+        for timestamp, measurement in final_measurements.items():
             if TRACE_LOGGING:
                 log.debug("Adding measurement:\n%s" % measurement.to_s())
             db_importer.add(measurement)
