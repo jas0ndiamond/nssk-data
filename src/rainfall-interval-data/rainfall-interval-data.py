@@ -36,8 +36,8 @@ TRACE_LOGGING = False
 # set these for testing specific date intervals, as the full dataset takes a long time
 OVERRIDE_START_DATETIME = None
 OVERRIDE_END_DATETIME = None
-#OVERRIDE_START_DATETIME = "2024-01-01 00:00:00"
-#OVERRIDE_END_DATETIME = "2024-04-30 00:00:00"
+#OVERRIDE_START_DATETIME = "2025-01-01 00:00:00"
+#OVERRIDE_END_DATETIME = "2025-06-30 00:00:00"
 
 
 # time window to search for a corresponding conductivity value
@@ -419,14 +419,16 @@ def get_cnv_hydrometric_measurements_date_window(cursor, sensor_name):
     return cnv_hydrometric_start_time, cnv_hydrometric_end_time
 
 
-def collect_cosmo_and_cnvhydro_measurements(cosmo_site_name, cnv_hydro_site_name, db_config_filename):
+def collect_cosmo_and_cnvhydro_measurements(
+        cosmo_site_name, cnv_hydro_site_name, db_config_filename
+) -> list[RainfallIntervalDataEntry]:
     # different from strict correlation, as we're keeping cosmo and cnv hydrometric measurements that do not correlate
     # also are not narrowing to the time window where measurements from both datasets are present
     #
     # iterate in chunks over cosmo and cnv hydrometric datasets. correlation should be done in the chunk time window
     # to save a lot of unnecessary processing. TODO: maybe a temp mongodb for staging work (local or remote)
 
-    # TODO: what happens if there's very skewed timestamps for measurements (i.e. cnv hydro starts 2 years before cosmo)?
+    # what happens if there's very skewed timestamps for measurements (i.e. cnv hydro starts 2 years before cosmo)?
     # story: a new cosmo site with conductivity data comes online
     #
     # we still want these measurements because maybe we have rainfall data from that time period
@@ -436,10 +438,10 @@ def collect_cosmo_and_cnvhydro_measurements(cosmo_site_name, cnv_hydro_site_name
     # yes => use cnv hydro measurement template to retrieve start_cnv_hydro to start_cosmo. still page through this
     # just add these to the final measurement set. no need to check for correlation.
 
-    # TODO: what happens if cosmo stops well before cnv hydrometric?
+    # what happens if cosmo stops well before cnv hydrometric?
     # just like above, but do the comparison with the dataset end timestamps
 
-    # TODO: what if there's a large gap in cosmo measurements but not cnv hydro?
+    # what if there's a large gap in cosmo measurements but not cnv hydro?
     # should be okay, both cosmo and cnv hydro data for the time block are retrieved before a correlation check is run
     # nothing will correlate, and the full block of cnv hydrometric measurements will be added to cnv_hydro_measurements
 
