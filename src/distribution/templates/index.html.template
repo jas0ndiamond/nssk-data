@@ -41,67 +41,67 @@ NSSK Data Source Aggregation, Storage, and Analysis
 
 <hr>
 <h3>CNV Flowworks</h3>
-City of North Vancouver data from Flowworks - <a href="https://github.com/jas0ndiamond/nssk-data/tree/main/src/cnv_flowworks">Info</a><br>
+City of North Vancouver data from Flowworks - <a href="https://github.com/jas0ndiamond/nssk-data/tree/development/src/cnv_flowworks">Info</a><br>
 $CNV_FLOWWORKS_BLOCK
 
 <hr>
 <h3>DNV Flowworks</h3>
-District of North Vancouver data from Flowworks - <a href="https://github.com/jas0ndiamond/nssk-data/tree/main/src/dnv_flowworks">Info</a><br>
+District of North Vancouver data from Flowworks - <a href="https://github.com/jas0ndiamond/nssk-data/tree/development/src/dnv_flowworks">Info</a><br>
 $DNV_FLOWWORKS_BLOCK
 
 <hr>
 <h3>CoSMo</h3>
-DFO PSEC Community Stream Monitoring (CoSMo) - <a href="https://github.com/jas0ndiamond/nssk-data/tree/main/src/cosmo">Info</a><br>
+DFO PSEC Community Stream Monitoring (CoSMo) - <a href="https://github.com/jas0ndiamond/nssk-data/tree/development/src/cosmo">Info</a><br>
 $COSMO_BLOCK
 
 <hr>
 <h3>Conductivity-Rainfall Correlation</h3>
-Conductivity-Rainfall Correlation for CoSMo Sites - <a href="https://github.com/jas0ndiamond/nssk-data/tree/main/src/conductivity-rainfall-correlation">Info</a><br>
+Conductivity-Rainfall Correlation for CoSMo Sites - <a href="https://github.com/jas0ndiamond/nssk-data/tree/development/src/conductivity-rainfall-correlation">Info</a><br>
 $CONDUCTIVITY_RAINFALL_CORRELATION_BLOCK
 
 <hr>
 <h3>Rainfall Events</h3>
-Rainfall Events occurring in CNV/DNV area - <a href="https://github.com/jas0ndiamond/nssk-data/tree/main/src/rainfall-events">Info</a><br>
+Rainfall Events occurring in CNV/DNV area - <a href="https://github.com/jas0ndiamond/nssk-data/tree/development/src/rainfall-events">Info</a><br>
 $RAINFALL_EVENTS_BLOCK
 
 <hr>
 <h3>Rainfall Event Data</h3>
-Rainfall Event Data occurring in CNV/DNV area - <a href="https://github.com/jas0ndiamond/nssk-data/tree/main/src/rainfall-event-data">Info</a><br>
+Rainfall Event Data occurring in CNV/DNV area - <a href="https://github.com/jas0ndiamond/nssk-data/tree/development/src/rainfall-event-data">Info</a><br>
 $RAINFALL_EVENT_DATA_BLOCK
 
 <hr>
 <h3>Rainfall Event Data Aggregate</h3>
-Rainfall Event Data Aggregate amounts occurring in CNV/DNV area - <a href="https://github.com/jas0ndiamond/nssk-data/tree/main/src/rainfall-event-data">Info</a><br>
+Rainfall Event Data Aggregate amounts occurring in CNV/DNV area - <a href="https://github.com/jas0ndiamond/nssk-data/tree/development/src/rainfall-event-data">Info</a><br>
 $RAINFALL_EVENT_DATA_AGGREGATE_BLOCK
 
 <hr>
 <h3>Rainfall Interval Data</h3>
-Rainfall Interval Data for in CNV area in 10-minute increments - <a href="https://github.com/jas0ndiamond/nssk-data/tree/main/src/rainfall-interval-data">Info</a><br>
+Rainfall Interval Data for in CNV area in 10-minute increments - <a href="https://github.com/jas0ndiamond/nssk-data/tree/development/src/rainfall-interval-data">Info</a><br>
 $RAINFALL_INTERVAL_DATA_BLOCK
 
 <hr>
-<h3>Rainfall Interval Data - Since July 2024</h3>
-Rainfall Interval Data for in CNV area in 10-minute increments, since July 2024 - <a href="https://github.com/jas0ndiamond/nssk-data/tree/main/src/rainfall-interval-data">Info</a><br>
+<h3>Rainfall Interval Data - Yearly</h3>
+Rainfall Interval Data for in CNV area in 10-minute increments: July, yearly - <a href="https://github.com/jas0ndiamond/nssk-data/tree/development/src/rainfall-interval-data">Info</a><br>
 $RAINFALL_INTERVAL_DATA_SINCE_JULY2024_BLOCK
 
 <hr>
 <h3>CNV Hydrometric</h3>
-CNV Hydrometric Flow Data - <a href="https://github.com/jas0ndiamond/nssk-data/tree/main/src/cnv-hydrometric">Info</a><br>
+CNV Hydrometric Flow Data - <a href="https://github.com/jas0ndiamond/nssk-data/tree/development/src/cnv-hydrometric">Info</a><br>
 $CNV_HYDROMETRIC_BLOCK
 
 <hr>
 <h3>Chloride Acuity</h3>
-Chloride Acuity for CoSMo sites - <a href="https://github.com/jas0ndiamond/nssk-data/tree/main/src/chloride-acuity">Info</a><br>
+Chloride Acuity for CoSMo sites - <a href="https://github.com/jas0ndiamond/nssk-data/tree/development/src/chloride-acuity">Info</a><br>
 $CHLORIDE_ACUITY_BLOCK
 
 <hr>
 <h3>Waterrangers</h3>
-Waterrangers data for CNV area - <a href="https://github.com/jas0ndiamond/nssk-data/tree/main/src/waterrangers">Info</a><br>
+Waterrangers data for CNV area - <a href="https://github.com/jas0ndiamond/nssk-data/tree/development/src/waterrangers">Info</a><br>
 $WATERRANGERS_BLOCK
 
 <hr>
 
-North Shore Streamkeepers 2025<br>
+North Shore Streamkeepers 2026<br>
 Report problems, requests, suggestions, and questions to Jason<br>
 <a href="https://github.com/jas0ndiamond/nssk-data">nssk-data Project</a><br>
 <a href="https://github.com/jas0ndiamond/nssk-database">nssk-database Project</a><br>
