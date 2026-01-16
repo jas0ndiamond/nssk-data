@@ -367,7 +367,7 @@ def correlate_with_dnv_flow_reading(cnv_flowworks_rainfall_timestamp, search_spa
     closest_timestamp_distance = 999999
 
     for row in search_space[sensor_site]:
-        # TODO empty and None checks for row
+        # None measurements excluded by dnv database query
 
         # determine best result
 
