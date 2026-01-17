@@ -222,9 +222,9 @@ class DBImporter:
                                     error_count += 1
 
                             except DataError as e:
-                                self.logger.warning(
-                                    "DataError running an insert:\n%s\nmessage: %s\nContinuing...\n" % (insert, message))
-                                self.logger.warning(e)
+                                self.logger.error(
+                                    f"DataError running an insert:\n{insert}\nContinuing...")
+                                self.logger.error(e)
 
                                 errors.append(insert)
 
