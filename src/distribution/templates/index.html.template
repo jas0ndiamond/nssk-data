@@ -81,8 +81,8 @@ $RAINFALL_INTERVAL_DATA_BLOCK
 
 <hr>
 <h3>Rainfall Interval Data - Yearly</h3>
-Rainfall Interval Data for in CNV area in 10-minute increments: July, yearly - <a href="https://github.com/jas0ndiamond/nssk-data/tree/development/src/rainfall-interval-data">Info</a><br>
-$RAINFALL_INTERVAL_DATA_SINCE_JULY2024_BLOCK
+Rainfall Interval Data for in CNV area in 10-minute increments: Yearly, beginning July 1st - <a href="https://github.com/jas0ndiamond/nssk-data/tree/development/src/rainfall-interval-data">Info</a><br>
+$RAINFALL_INTERVAL_DATA_YEARLY_BLOCK
 
 <hr>
 <h3>CNV Hydrometric</h3>
