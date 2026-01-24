@@ -1163,7 +1163,7 @@ def correlate_rainfall_intervals(prelim_measurements, cosmo_site, cnv_flowworks_
                                 log.debug((
                                     "Found trailing_rainfall_measurement: "
                                     f"{trailing_rainfall_measurement[0].strftime(MYSQL_DATE_FMT)}"
-                                    f"=> {pprint.pformat(trailing_rainfall_measurement)}"
+                                    f" => {pprint.pformat(trailing_rainfall_measurement)}"
                                 ))
 
                                 # trailing_rainfall_measurement[0]: measurement_timestamp
