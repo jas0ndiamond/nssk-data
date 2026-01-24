@@ -850,19 +850,12 @@ def collect_cosmo_and_cnvhydro_measurements(
                                     flush=True
                                 )
                             else:
-
                                 msg = (
                                     (f"Measurement key '{measurement_key} => {data_entry.to_s()}' already "
                                      "exists tallying uncorrelated cosmo measurements:"
                                      f"{cnv_hydro_measurements[measurement_key].to_s()}")
                                 )
-                                log.error(msg)
-                                # print(msg)
-
-                                # TODO: may not be valid given that we're keeping uncorrelated measurements
-                                # raise Exception((f"Measurement key {measurement_key} already "
-                                #      "exists tallying uncorrelated cosmo measurements"
-                                # ))
+                                log.warning(msg)
 
                         # add remaining cnv hydro measurements to cnv_hydro_measurements{}, and set the db destination
                         #cnv_hydro_measurements.update(cnv_hydrometric_block_measurements)
@@ -882,20 +875,15 @@ def collect_cosmo_and_cnvhydro_measurements(
                                     flush=True
                                 )
                             else:
+                                # likely inevitable to see duplicates as the second dataset that we're windowing through
+                                # will overlap other windows with the correlation time buffer
                                 msg = (
                                     (f"Measurement key '{measurement_key} => {data_entry.to_s()}' already "
                                      "exists tallying uncorrelated cnv hydro measurements:"
                                      f"{cnv_hydro_measurements[measurement_key].to_s()}")
                                 )
 
-                                # TODO: examine changing log level here and above
-                                log.error(msg)
-                                # print(msg)
-
-                                # TODO: may not be valid given that we're keeping uncorrelated measurements
-                                # raise Exception((f"Measurement key {measurement_key} already "
-                                #      "exists tallying uncorrelated cnv hydro measurements"
-                                # ))
+                                log.warning(msg)
 
                         log.debug((
                             f"Ending scan of cosmo block {cosmo_block_start_datetime}"
