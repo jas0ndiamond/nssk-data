@@ -1,4 +1,5 @@
 from pathlib import Path
+import pprint
 import re
 import sys
 
@@ -66,6 +67,7 @@ class CNVFlowworksDataEntry(DataEntry):
         # just check for data validity
 
         # rainfall/hourly rainfall measurements begin in 1994, other measurements are populated much later
+        # rainfall measurements are also hourly at the beginning of the dataset, so hourly measurements only are valid
         # require timestamp and valid rainfall data
         # okay if other measurements are missing
 
@@ -81,19 +83,23 @@ class CNVFlowworksDataEntry(DataEntry):
         if fields[RAINFALL_FIELD] == '' or fields[RAINFALL_FIELD] is None:
             raise DataValidationException(f"Missing rainfall amount [{fields[RAINFALL_FIELD]}]")
 
+        has_valid_rainfall_measurement = False
         ###################
-        # rainfall amount - required to be present and valid
-        try:
-            float(fields[RAINFALL_FIELD])
-        except Exception as e:
-            raise DataValidationException(f"found invalid rainfall [{fields[RAINFALL_FIELD]}]")
+        # rainfall amount - either this or hourly rainfall must be present and valid
+        if fields[HOURLY_RAINFALL_FIELD] != "":
+            try:
+                float(fields[RAINFALL_FIELD])
+            except Exception as e:
+                raise DataValidationException(f"found invalid rainfall [{fields[RAINFALL_FIELD]}]")
 
-        # reject unrealistic rainfall readings
-        if float(fields[RAINFALL_FIELD]) < RAINFALL_MIN or float(fields[RAINFALL_FIELD]) >= RAINFALL_MAX:
-            raise DataValidationException(f"found out-of-range rainfall [{fields[RAINFALL_FIELD]}]")
+            # reject unrealistic rainfall readings
+            if float(fields[RAINFALL_FIELD]) < RAINFALL_MIN or float(fields[RAINFALL_FIELD]) >= RAINFALL_MAX:
+                raise DataValidationException(f"found out-of-range rainfall [{fields[RAINFALL_FIELD]}]")
+
+            has_valid_rainfall_measurement = True
 
         ###################
-        # hourly rainfall - required to be present and valid
+        # hourly rainfall - either this or rainfall must be present and valid
         # however only present at the 1h mark
         if fields[HOURLY_RAINFALL_FIELD] != "":
             try:
@@ -105,6 +111,11 @@ class CNVFlowworksDataEntry(DataEntry):
             if (float(fields[HOURLY_RAINFALL_FIELD]) < RAINFALL_MIN or
                     float(fields[HOURLY_RAINFALL_FIELD]) >= RAINFALL_MAX):
                 raise DataValidationException(f"found out-of-range hourly rainfall [{fields[HOURLY_RAINFALL_FIELD]}]")
+
+            has_valid_rainfall_measurement = True
+
+        if not has_valid_rainfall_measurement:
+            raise DataValidationException(f"Did not find valid rainfall measurement: {pprint.pformat(fields)}")
 
         ###################
         # air temperature
