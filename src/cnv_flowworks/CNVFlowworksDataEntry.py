@@ -82,6 +82,17 @@ class CNVFlowworksDataEntry(DataEntry):
             raise DataValidationException(f"Missing rainfall amount [{fields[RAINFALL_FIELD]}]")
 
         ###################
+        # rainfall amount - required to be present and valid
+        try:
+            float(fields[RAINFALL_FIELD])
+        except Exception as e:
+            raise DataValidationException(f"found invalid rainfall [{fields[RAINFALL_FIELD]}]")
+
+        # reject unrealistic rainfall readings
+        if float(fields[RAINFALL_FIELD]) < RAINFALL_MIN or float(fields[RAINFALL_FIELD]) >= RAINFALL_MAX:
+            raise DataValidationException(f"found out-of-range rainfall [{fields[RAINFALL_FIELD]}]")
+
+        ###################
         # hourly rainfall - required to be present and valid
         # however only present at the 1h mark
         if fields[HOURLY_RAINFALL_FIELD] != "":
@@ -91,19 +102,9 @@ class CNVFlowworksDataEntry(DataEntry):
                 raise DataValidationException(f"found invalid hourly rainfall [{fields[RAINFALL_FIELD]}]")
 
             # reject unrealistic hourly rainfall readings
-            if float(fields[HOURLY_RAINFALL_FIELD]) <= RAINFALL_MIN or float(fields[HOURLY_RAINFALL_FIELD]) > RAINFALL_MAX:
+            if (float(fields[HOURLY_RAINFALL_FIELD]) < RAINFALL_MIN or
+                    float(fields[HOURLY_RAINFALL_FIELD]) >= RAINFALL_MAX):
                 raise DataValidationException(f"found out-of-range hourly rainfall [{fields[HOURLY_RAINFALL_FIELD]}]")
-
-        ###################
-        # rainfall amount - required to be present and valid
-        try:
-            float(fields[RAINFALL_FIELD])
-        except Exception as e:
-            raise DataValidationException(f"found invalid rainfall [{fields[RAINFALL_FIELD]}]")
-
-        # reject unrealistic rainfall readings
-        if float(fields[RAINFALL_FIELD]) <= RAINFALL_MIN or float(fields[RAINFALL_FIELD]) >= RAINFALL_MAX:
-            raise DataValidationException(f"found out-of-range rainfall [{fields[RAINFALL_FIELD]}]")
 
         ###################
         # air temperature
@@ -112,7 +113,7 @@ class CNVFlowworksDataEntry(DataEntry):
                 float(fields[AIR_TEMP_FIELD])
             except Exception as e:
                 raise DataValidationException(
-                    "found invalid air temperature [{fields[AIR_TEMP_FIELD]}]"
+                    f"found invalid air temperature [{fields[AIR_TEMP_FIELD]}]"
                 )
 
             # reject unrealistic temperature readings
