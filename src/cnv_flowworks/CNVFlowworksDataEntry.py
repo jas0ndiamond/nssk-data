@@ -1,5 +1,7 @@
 from pathlib import Path
+import re
 import sys
+
 
 path_root = Path(__file__).parents[2]
 sys.path.append(str(path_root))
@@ -14,6 +16,26 @@ from src.exception.DataValidationException import DataValidationException
 # Barometer 5 min Intervals (mbar)
 # Hourly Rainfall (mm)
 # Rainfall (mm)
+
+# schema
+TIMESTAMP_FIELD = "yyyy/MM/dd HH:mm:ss"
+BARO_PRES_FIELD = "Barometer 5 min Intervals (mbar)"
+AIR_TEMP_FIELD = "Air Temperature - 5 min Intervals (°C)"
+HOURLY_RAINFALL_FIELD = "Hourly Rainfall (mm)"
+RAINFALL_FIELD = "Rainfall (mm)"
+
+# in C
+AIR_TEMP_MIN = -70
+AIR_TEMP_MAX = 70
+
+# in mbar
+BARO_PRES_MIN = 0
+
+# in mm
+RAINFALL_MIN = 0
+
+# timestamp regex matching "yyyy/MM/dd HH:mm:ss"
+TS_REGEX = re.compile(r"\b\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}\b")
 
 
 class CNVFlowworksDataEntry(DataEntry):
@@ -34,42 +56,70 @@ class CNVFlowworksDataEntry(DataEntry):
         ##################
         # value buckets - these can be empty in the dump
 
-        if self.get('Hourly Rainfall (mm)') == '':
-            self.set('Hourly Rainfall (mm)', None)
+        if self.get(HOURLY_RAINFALL_FIELD) == '':
+            self.set(HOURLY_RAINFALL_FIELD, None)
 
     def _validate_data(self, fields):
         # no narrowing of dataset done here
         # just check for data validity
 
-        if fields['Rainfall (mm)'] == '' or fields['Rainfall (mm)'] is None:
-            raise DataValidationException("Missing Rainfall (mm) [%s]" % fields['Rainfall (mm)'])
+        # missing timestamp field
+        if fields[TIMESTAMP_FIELD] == '' or fields[TIMESTAMP_FIELD] is None:
+            raise DataValidationException(f"Missing measurement timestamp [{TIMESTAMP_FIELD}]")
 
-        if fields['yyyy/MM/dd HH:mm:ss'] == '' or fields['yyyy/MM/dd HH:mm:ss'] is None:
-            raise DataValidationException("Missing yyyy/MM/dd HH:mm:ss [%s]" % fields['yyyy/MM/dd HH:mm:ss'])
+        # missing rainfall field
+        if fields[RAINFALL_FIELD] == '' or fields[RAINFALL_FIELD] is None:
+            raise DataValidationException(f"Missing rainfall amount [{fields[RAINFALL_FIELD]}]")
 
-        # TODO: type constraints. enforce an alphabet on fields where applicable
-
-        try:
-            float(fields["Air Temperature - 5 min Intervals (°C)"])
-        except Exception as e:
-            raise DataValidationException("found invalid Air Temperature - 5 min Intervals (°C) [%s]" %
-                                          fields['Air Temperature - 5 min Intervals (°C)'])
-
-        if (float(fields["Air Temperature - 5 min Intervals (°C)"]) > 80
-                or float(fields["Air Temperature - 5 min Intervals (°C)"]) < -80):
-            raise DataValidationException("found out-of-range Air Temperature - 5 min Intervals (°C) [%s]" %
-                                          fields['Air Temperature - 5 min Intervals (°C)'])
+        if not TS_REGEX.search(fields[TIMESTAMP_FIELD]):
+            raise DataValidationException(f"Invalid timestamp [{TIMESTAMP_FIELD}]")
 
         try:
-            float(fields["Barometer 5 min Intervals (mbar)"])
+            float(fields[AIR_TEMP_FIELD])
         except Exception as e:
-            raise DataValidationException("found invalid Barometer 5 min Intervals (mbar) [%s]" %
-                                          fields['Barometer 5 min Intervals (mbar)'])
+            raise DataValidationException(
+                "found invalid air temperature [{fields[AIR_TEMP_FIELD]}]"
+            )
 
+        # reject unrealistic temperature readings
+        if (float(fields[AIR_TEMP_FIELD]) > AIR_TEMP_MAX
+                or float(fields[AIR_TEMP_FIELD]) < AIR_TEMP_MIN):
+            raise DataValidationException(
+                f"found out-of-range air temperature [{fields[AIR_TEMP_FIELD]}]"
+            )
+
+        ###################
+        # barometric pressure
         try:
-            float(fields["Rainfall (mm)"])
+            float(fields[BARO_PRES_FIELD])
         except Exception as e:
-            raise DataValidationException("found invalid Rainfall (mm) [%s]" % fields['Rainfall (mm)'])
+            raise DataValidationException(f"found invalid barometric pressure [{fields[BARO_PRES_FIELD]}]")
+
+        # reject unrealistic barometric pressure readings
+        if float(fields[BARO_PRES_FIELD]) <= BARO_PRES_MIN:
+            raise DataValidationException(f"found out-of-range barometric pressure [{fields[BARO_PRES_FIELD]}]")
+
+        ###################
+        # hourly rainfall
+        try:
+            float(fields[HOURLY_RAINFALL_FIELD])
+        except Exception as e:
+            raise DataValidationException(f"found invalid hourly rainfall [{fields[RAINFALL_FIELD]}]")
+
+        # reject unrealistic hourly rainfall readings
+        if float(fields[HOURLY_RAINFALL_FIELD]) <= RAINFALL_MIN:
+            raise DataValidationException(f"found out-of-range hourly rainfall [{fields[HOURLY_RAINFALL_FIELD]}]")
+
+        ###################
+        # rainfall amount
+        try:
+            float(fields[RAINFALL_FIELD])
+        except Exception as e:
+            raise DataValidationException(f"found invalid rainfall [{fields[RAINFALL_FIELD]}]")
+
+        # reject unrealistic rainfall readings
+        if float(fields[RAINFALL_FIELD]) <= RAINFALL_MIN:
+            raise DataValidationException(f"found out-of-range rainfall [{fields[RAINFALL_FIELD]}]")
 
         return True
 
