@@ -88,13 +88,13 @@ class CNVFlowworksDataEntry(DataEntry):
         # rainfall amount - either this or hourly rainfall must be present and valid
         if fields[HOURLY_RAINFALL_FIELD] != "":
             try:
-                float(fields[RAINFALL_FIELD])
+                value = float(fields[RAINFALL_FIELD])
             except Exception as e:
                 raise DataValidationException(f"found invalid rainfall [{fields[RAINFALL_FIELD]}]")
 
             # reject unrealistic rainfall readings
-            if float(fields[RAINFALL_FIELD]) < RAINFALL_MIN or float(fields[RAINFALL_FIELD]) >= RAINFALL_MAX:
-                raise DataValidationException(f"found out-of-range rainfall [{fields[RAINFALL_FIELD]}]")
+            if value < RAINFALL_MIN or value >= RAINFALL_MAX:
+                raise DataValidationException(f"found out-of-range rainfall [{value}]")
 
             has_valid_rainfall_measurement = True
 
@@ -103,17 +103,18 @@ class CNVFlowworksDataEntry(DataEntry):
         # however only present at the 1h mark
         if fields[HOURLY_RAINFALL_FIELD] != "":
             try:
-                float(fields[HOURLY_RAINFALL_FIELD])
+                value = float(fields[HOURLY_RAINFALL_FIELD])
             except Exception as e:
                 raise DataValidationException(f"found invalid hourly rainfall [{fields[RAINFALL_FIELD]}]")
 
             # reject unrealistic hourly rainfall readings
-            if (float(fields[HOURLY_RAINFALL_FIELD]) < RAINFALL_MIN or
-                    float(fields[HOURLY_RAINFALL_FIELD]) >= RAINFALL_MAX):
+            if value < RAINFALL_MIN or value >= RAINFALL_MAX:
                 raise DataValidationException(f"found out-of-range hourly rainfall [{fields[HOURLY_RAINFALL_FIELD]}]")
 
             has_valid_rainfall_measurement = True
 
+        ###################
+        # at least one of the rainfall measurements is valid
         if not has_valid_rainfall_measurement:
             raise DataValidationException(f"Did not find valid rainfall measurement: {pprint.pformat(fields)}")
 
@@ -121,30 +122,27 @@ class CNVFlowworksDataEntry(DataEntry):
         # air temperature
         if fields[AIR_TEMP_FIELD] != "":
             try:
-                float(fields[AIR_TEMP_FIELD])
+                value = float(fields[AIR_TEMP_FIELD])
             except Exception as e:
                 raise DataValidationException(
                     f"found invalid air temperature [{fields[AIR_TEMP_FIELD]}]"
                 )
 
             # reject unrealistic temperature readings
-            if (float(fields[AIR_TEMP_FIELD]) >= AIR_TEMP_MAX
-                    or float(fields[AIR_TEMP_FIELD]) <= AIR_TEMP_MIN):
-                raise DataValidationException(
-                    f"found out-of-range air temperature [{fields[AIR_TEMP_FIELD]}]"
-                )
+            if value >= AIR_TEMP_MAX or value <= AIR_TEMP_MIN:
+                raise DataValidationException(f"found out-of-range air temperature [{fields[AIR_TEMP_FIELD]}]")
 
         ###################
         # barometric pressure
         if fields[BARO_PRES_FIELD] != "":
             try:
-                float(fields[BARO_PRES_FIELD])
+                value = float(fields[BARO_PRES_FIELD])
             except Exception as e:
                 raise DataValidationException(f"found invalid barometric pressure [{fields[BARO_PRES_FIELD]}]")
 
             # reject unrealistic barometric pressure readings
-            if float(fields[BARO_PRES_FIELD]) <= BARO_PRES_MIN or float(fields[BARO_PRES_FIELD]) >= BARO_PRES_MAX:
-                raise DataValidationException(f"found out-of-range barometric pressure [{fields[BARO_PRES_FIELD]}]")
+            if value <= BARO_PRES_MIN or value >= BARO_PRES_MAX:
+                raise DataValidationException(f"found out-of-range barometric pressure [{value}]")
 
         return True
 
