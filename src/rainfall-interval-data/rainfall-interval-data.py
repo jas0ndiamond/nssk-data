@@ -496,6 +496,8 @@ def collect_cosmo_and_cnvhydro_measurements(
                         open("sql/get-cnv-hydrometric-measurements.sql.template").read()
                     )
 
+                    #attempt to read override start and end times from config file
+
                     # determine if we're doing a production run of the dataset, or just a test window
                     # OVERRIDE_START_DATETIME must be set if testing
                     if OVERRIDE_START_DATETIME is None:
@@ -807,10 +809,10 @@ def collect_cosmo_and_cnvhydro_measurements(
 
                                     correlated_measurement_count += 1
                                     print(
-                                        (f"\r\tCorrelations processed: {correlated_measurement_count}, "
-                                         f" CoSMo measurements: {cosmo_measurement_count}, "
-                                         f" CNV Hydrometric measurements: {cnv_hydrometric_measurement_count}. "
-                                         f"Processing interval: {cosmo_block_start_datetime} => {cosmo_block_end_datetime}"),
+                                        (f"\r\tCorrelations: {correlated_measurement_count}, "
+                                         f" CoSMo-only: {cosmo_measurement_count}, "
+                                         f" CNV Hydro-only: {cnv_hydrometric_measurement_count}. "
+                                         f"Time interval: {cosmo_block_start_datetime} => {cosmo_block_end_datetime}"),
                                         end='',
                                         flush=True
                                     )
@@ -842,10 +844,10 @@ def collect_cosmo_and_cnvhydro_measurements(
                                 cosmo_measurement_count += 1
 
                                 print(
-                                    (f"\r\tCorrelations processed: {correlated_measurement_count}, "
-                                    f" CoSMo measurements: {cosmo_measurement_count}, "
-                                    f" CNV Hydrometric measurements: {cnv_hydrometric_measurement_count}. "
-                                    f"Processing interval: {cosmo_block_start_datetime} => {cosmo_block_end_datetime}"),
+                                    (f"\r\tCorrelations: {correlated_measurement_count}, "
+                                    f" CoSMo-only: {cosmo_measurement_count}, "
+                                    f" CNV Hydro-only: {cnv_hydrometric_measurement_count}. "
+                                    f"Time interval: {cosmo_block_start_datetime} => {cosmo_block_end_datetime}"),
                                     end='',
                                     flush=True
                                 )
@@ -867,10 +869,10 @@ def collect_cosmo_and_cnvhydro_measurements(
                                 cnv_hydrometric_measurement_count += 1
 
                                 print(
-                                    (f"\r\tCorrelations processed: {correlated_measurement_count}, "
-                                    f" CoSMo measurements: {cosmo_measurement_count}, "
-                                    f" CNV Hydrometric measurements: {cnv_hydrometric_measurement_count}. "
-                                    f"Processing interval: {cosmo_block_start_datetime} => {cosmo_block_end_datetime}"),
+                                    (f"\r\tCorrelations: {correlated_measurement_count}, "
+                                    f" CoSMo-only: {cosmo_measurement_count}, "
+                                    f" CNV Hydro-only: {cnv_hydrometric_measurement_count}. "
+                                    f"Time interval: {cosmo_block_start_datetime} => {cosmo_block_end_datetime}"),
                                     end='',
                                     flush=True
                                 )
