@@ -29,3 +29,13 @@
   RAINFALL_EVENT_ID_FIELD  
   ```
 * CoSMo sites used are `WAGG01` and `WAGG03` only.
+* `RAINFALL_EVENT_ID_FIELD` is a number identifier to signify uniqueness and is in the form YYYYNNN.
+  * A value of `2018019` signifies the 19th rainfall event of year 2018.
+* Requires a valid `MeasurementTimestamp` and `Rainfall` amount from the CNV Flowworks dataset.
+  * `FlowReading` from the DNV Flowworks dataset is optional in correlating measurements.
+  * `AirTemperature` from the CNV Flowworks dataset is optional in correlating measurements.
+  * Conductivity measurements from the CoSMo dataset are optional in correlating measurements.
+  * We want rainfall data, plus any correlatable measurements. 
+* Excludes CoSMo conductivity values <= 0.
+* Excludes `NULL` DNV Flowworks flow readings.
+* Gaps are often be rooted in measurement gaps in the component datasets. 
