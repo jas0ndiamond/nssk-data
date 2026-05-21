@@ -17,7 +17,7 @@ Imports from NSSK Waterrangers data dumps into a MySQL database
 ---
 ## Notes
 
-Logs output to `waterrangers.log`
-
-The database will enforce uniqueness constraints. Inserts that fail uniqueness constraints will be dumped 
+* Logs output to `waterrangers.log`
+* The database will enforce uniqueness constraints. Inserts that fail uniqueness constraints will be dumped 
 to a `duplicates_*.sql` file
+* May be defunct- no measurements for 2026.
