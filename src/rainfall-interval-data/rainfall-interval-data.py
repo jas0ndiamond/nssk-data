@@ -33,10 +33,10 @@ logging.getLogger("DBImporter").setLevel(logging.INFO)
 TRACE_LOGGING = False
 
 # set these for testing specific date intervals, as the full dataset takes a long time
-#OVERRIDE_START_DATETIME = None
-#OVERRIDE_END_DATETIME = None
-OVERRIDE_START_DATETIME = "2020-01-01 00:00:00"
-OVERRIDE_END_DATETIME = "2020-04-01 00:00:00"
+OVERRIDE_START_DATETIME = None
+OVERRIDE_END_DATETIME = None
+#OVERRIDE_START_DATETIME = "2020-01-01 00:00:00"
+#OVERRIDE_END_DATETIME = "2020-04-01 00:00:00"
 
 
 # time window to search for a corresponding conductivity value
