@@ -86,12 +86,12 @@ $RAINFALL_INTERVAL_DATA_YEARLY_BLOCK
 
 <hr>
 <h3>CNV Hydrometric</h3>
-CNV Hydrometric Flow Data - <a href="https://github.com/jas0ndiamond/nssk-data/tree/development/src/cnv-hydrometric">Info</a><br>
+CNV Hydrometric Flow Data - <a href="https://github.com/jas0ndiamond/nssk-data/tree/development/src/cnv_hydrometric">Info</a><br>
 $CNV_HYDROMETRIC_BLOCK
 
 <hr>
 <h3>Chloride Acuity</h3>
-Chloride Acuity for CoSMo sites - <a href="https://github.com/jas0ndiamond/nssk-data/tree/development/src/chloride-acuity">Info</a><br>
+Chloride Acuity for CoSMo sites - <a href="https://github.com/jas0ndiamond/nssk-data/tree/development/src/chloride_acuity">Info</a><br>
 $CHLORIDE_ACUITY_BLOCK
 
 <hr>
