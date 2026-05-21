@@ -2,12 +2,12 @@
 
 ---
 ## Description
-* Collect CoSMo measurements when conductivity readings are high.
+* Focused collection of CoSMo measurements during high periods of conductivity readings.
 
 ---
 ## Setup
 1. Create a database config file from the template in nssk-data/conf for the database that will house the imported data.
-2. Run import for `cosmo`.
+2. Run import for `cosmo` and `cosmo-solinst`.
 
 ---
 ## Run
