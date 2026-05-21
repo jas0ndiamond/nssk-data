@@ -8,8 +8,6 @@ from string import Template
 
 from mysql.connector import connect, Error
 
-from src.exception.PrecheckFailedException import PrecheckFailedException
-
 path_root = Path(__file__).parents[2]
 sys.path.append(str(path_root))
 
@@ -17,6 +15,7 @@ from src.importer.DBImporter import DBImporter
 from src.importer.DBConfig import DBConfig
 from src.importer.DBConfigFactory import DBConfigFactory
 from RainfallEventMeasurementsDataEntry import RainfallEventMeasurementsDataEntry
+from src.exception.PrecheckFailedException import PrecheckFailedException
 
 # compile rainfall event data for the cnv region
 
