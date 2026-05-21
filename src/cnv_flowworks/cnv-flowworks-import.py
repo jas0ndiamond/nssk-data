@@ -184,8 +184,7 @@ def main(parsed_args):
                     # push object into collection
                     # log collection at end to file
 
-                    logger.error("Error constructing CNVFlowworksDataEntry")
-                    logger.error(e)
+                    logger.error(f"Error constructing CNVFlowworksDataEntry:\n{e}")
 
                     invalid_rows.append(row)
                     invalid_row_count += 1
