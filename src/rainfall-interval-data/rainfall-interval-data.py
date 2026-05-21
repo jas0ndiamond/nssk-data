@@ -1700,6 +1700,7 @@ def collect_interval_data(db_config_filename, db_importer):
         log_msg = "Processing %s site completed" % cosmo_site
         print("%s" % log_msg)
         log.info(log_msg)
+        print("=============================================================================")
 
 
 ##############################################
