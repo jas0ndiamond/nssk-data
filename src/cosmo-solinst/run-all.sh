@@ -63,4 +63,4 @@ fi
 
 # dec 2025
 ../../venv/bin/python3 ./cosmo-solinst-import.py -cfg "$CONF_FILE" WAGG03\
-~/opt/nssk-data-dumps/solinst/2130615_WAGG03_2025_12_06.csv
+ ~/opt/nssk-data-dumps/solinst/2130615_WAGG03_2025_12_06.csv
