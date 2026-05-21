@@ -61,8 +61,14 @@ schema_field_mapping = {
 
 
 def want_row(in_row):
-    # only one site for now: accept it all
+    # older data only has hourly rainfall amounts, which aren't particularly useful
+    # exclude rows that don't have AirTemperature and BarometricPressure defined
+
+    # actually just take from 2018 onward where data is largely complete
+    # before this time there are a lot of missing measurements
+
     return True
+
 
 
 ###############################
@@ -178,8 +184,7 @@ def main(parsed_args):
                     # push object into collection
                     # log collection at end to file
 
-                    logger.error("Error constructing CNVFlowworksDataEntry")
-                    logger.error(e)
+                    logger.error(f"Error constructing CNVFlowworksDataEntry:\n{e}")
 
                     invalid_rows.append(row)
                     invalid_row_count += 1

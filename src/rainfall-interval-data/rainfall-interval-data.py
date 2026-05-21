@@ -6,7 +6,6 @@ import timeit
 from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
-from sqlite3 import Cursor
 from string import Template
 
 from mysql.connector import connect, Error
@@ -36,15 +35,15 @@ TRACE_LOGGING = False
 # set these for testing specific date intervals, as the full dataset takes a long time
 OVERRIDE_START_DATETIME = None
 OVERRIDE_END_DATETIME = None
-#OVERRIDE_START_DATETIME = "2025-01-01 00:00:00"
-#OVERRIDE_END_DATETIME = "2025-06-30 00:00:00"
+#OVERRIDE_START_DATETIME = "2020-01-01 00:00:00"
+#OVERRIDE_END_DATETIME = "2020-04-01 00:00:00"
 
 
 # time window to search for a corresponding conductivity value
-# +/- 2 minutes. in seconds
+# +/- 2 minutes, 29 seconds. in seconds
 # cnv hydrometrics measurements are every 5 minutes
 # adjust with any changes to rainfall measurement frequency
-CNV_HYDROMETRIC_CORRELATION_WINDOW = 2 * 60
+CNV_HYDROMETRIC_CORRELATION_WINDOW = (2 * 60) + 29
 
 # time window for two summed 5-min rainfall measurements, to be correlated with existing cosmo/cnv hydro measurements
 # +/- 5 minutes. in seconds
@@ -52,13 +51,11 @@ CNV_FLOWWORKS_CORRELATION_WINDOW = 5 * 60
 
 # increment to step through measurements in a COSMO table
 # shouldn't be too big
-# 7 days
 BLOCK_SCAN_WINDOW_DAYS = 35
 COSMO_SCAN_INCREMENT = 60 * 60 * 24 * BLOCK_SCAN_WINDOW_DAYS
 
 # increment to step through measurements in a cnv flowworks table
 # shouldn't be too big
-# 7 days
 # 1 day for test value
 CNV_FLOWWORKS_SCAN_INCREMENT = 60 * 60 * 24 * BLOCK_SCAN_WINDOW_DAYS
 
@@ -120,12 +117,41 @@ MYSQL_DATE_FMT = "%Y-%m-%d %H:%M:%S"
 ORDER_ASC = "ASC"
 ORDER_DESC = "DESC"
 
+
+def print_meas_correl_status(correlated_count, cosmo_count, cnv_hydro_count, start_datetime, end_datetime):
+    """
+    Print running status of measurement accumulation of CoSMo, CNV Hydrometric, and any correlated measurements
+    between the two datasets.
+
+    """
+    print(
+        (f"\rInterval[{start_datetime} => {end_datetime}]: "
+         f"Correlated: {correlated_count}, "
+         f"CoSMo: {cosmo_count}, "
+         f"CNV Hydro: {cnv_hydro_count}"),
+        end='',
+        flush=True
+    )
+
+
 def precheck(conf_file):
     # need a destination database/table for the correlated data
     # database created by setup script? => yes
     # table created by setup script? => yes
 
     config = DBConfigFactory.build(conf_file)
+
+    #################
+    # set overrides for start and end
+    if DBConfig.CONFIG_DATASET_START in config:
+        global OVERRIDE_START_DATETIME
+        OVERRIDE_START_DATETIME = config[DBConfig.CONFIG_DATASET_START]
+        log.info(f"Using config file Dataset Start of {OVERRIDE_START_DATETIME}")
+
+    if DBConfig.CONFIG_DATASET_END in config:
+        global OVERRIDE_END_DATETIME
+        OVERRIDE_END_DATETIME = config[DBConfig.CONFIG_DATASET_END]
+        log.info(f"Using config file Dataset End of {OVERRIDE_END_DATETIME}")
 
     #################
     # check that the source databases exist and the target database exists
@@ -295,7 +321,7 @@ def get_cosmo_measurements_date_window(cursor, sensor_name):
 
 
 # return start and end dates for cnv rainfall measurements
-def get_cnv_flowworks_measurements_date_window(cursor: Cursor, sensor_name):
+def get_cnv_flowworks_measurements_date_window(cursor, sensor_name):
     ###################
     # determine cnv_flowworks start datetime
 
@@ -543,10 +569,13 @@ def collect_cosmo_and_cnvhydro_measurements(
                         log.warning(log_str)
                         print(log_str)
 
-                    log.info(f"Running cosmo/cnv hydro correlation between {dataset_start} and {dataset_end}")
+                    log_str = (f"Running CoSMo/CNV Hydrometric correlation between {dataset_start} and {dataset_end} "
+                    f"for CoSMo site {cosmo_site_name} and CNV Hydrometric site {cnv_hydro_site_name}")
+                    log.info(log_str)
+                    print(log_str)
 
                     # cosmo is our "primary" dataset used in this correlation
-                    dataset_inc = dataset_start
+                    dataset_inc :datetime = dataset_start
 
                     correlated_measurement_count = 0
                     cosmo_measurement_count = 0
@@ -559,8 +588,8 @@ def collect_cosmo_and_cnvhydro_measurements(
                         # determine window and build queries
                         # need full date for cosmo
                         # need full date for cnv hydro
-                        cosmo_block_start_datetime = dataset_inc
-                        cosmo_block_end_datetime = (
+                        cosmo_block_start_datetime :datetime = dataset_inc
+                        cosmo_block_end_datetime :datetime = (
                                 dataset_inc + timedelta(seconds=COSMO_SCAN_INCREMENT))
 
                         if cosmo_block_end_datetime > dataset_end:
@@ -572,9 +601,9 @@ def collect_cosmo_and_cnvhydro_measurements(
                         ))
 
                         # retrieve the cnv hydrometric data for the time of the cosmo block, +/- CORRELATION_WINDOW
-                        cnv_hydro_block_start_datetime = cosmo_block_start_datetime - timedelta(
+                        cnv_hydro_block_start_datetime :datetime = cosmo_block_start_datetime - timedelta(
                             seconds=CNV_HYDROMETRIC_CORRELATION_WINDOW)
-                        cnv_hydro_block_end_datetime = cosmo_block_end_datetime + timedelta(
+                        cnv_hydro_block_end_datetime :datetime = cosmo_block_end_datetime + timedelta(
                             seconds=CNV_HYDROMETRIC_CORRELATION_WINDOW)
 
                         if cnv_hydro_block_end_datetime > dataset_end:
@@ -739,6 +768,7 @@ def collect_cosmo_and_cnvhydro_measurements(
                         log.debug(f"found cosmo block rows: {len(cosmo_block_measurements)}")
                         log.debug(f"found cnv hydrometric block rows: {len(cnv_hydrometric_block_measurements)}")
 
+
                         # iterate over new key lists since we're deleting elements from *_block_measurements
                         for cosmo_measurement_timestamp_key in list(cosmo_block_measurements.keys()):
 
@@ -806,14 +836,9 @@ def collect_cosmo_and_cnvhydro_measurements(
                                                          f"{cnv_hydrometric_timestamp_key} from block measurements"))
 
                                     correlated_measurement_count += 1
-                                    print(
-                                        (f"\r\tCorrelations processed: {correlated_measurement_count}, "
-                                         f" CoSMo measurements: {cosmo_measurement_count}, "
-                                         f" CNV Hydrometric measurements: {cnv_hydrometric_measurement_count}. "
-                                         f"Processing interval: {cosmo_block_start_datetime} => {cosmo_block_end_datetime}"),
-                                        end='',
-                                        flush=True
-                                    )
+                                    print_meas_correl_status(correlated_measurement_count, cosmo_measurement_count,
+                                                             cnv_hydrometric_measurement_count,
+                                                             cosmo_block_start_datetime, cosmo_block_end_datetime)
 
                                     # we found a correlated measurement. we only want the first one that matches the
                                     # correlation criteria, and don't care about the remaining cnv hydro measurements
@@ -840,29 +865,16 @@ def collect_cosmo_and_cnvhydro_measurements(
                                 cosmo_measurements[measurement_key] = data_entry
 
                                 cosmo_measurement_count += 1
-
-                                print(
-                                    (f"\r\tCorrelations processed: {correlated_measurement_count}, "
-                                    f" CoSMo measurements: {cosmo_measurement_count}, "
-                                    f" CNV Hydrometric measurements: {cnv_hydrometric_measurement_count}. "
-                                    f"Processing interval: {cosmo_block_start_datetime} => {cosmo_block_end_datetime}"),
-                                    end='',
-                                    flush=True
-                                )
+                                print_meas_correl_status(correlated_measurement_count, cosmo_measurement_count,
+                                                         cnv_hydrometric_measurement_count,
+                                                         cosmo_block_start_datetime, cosmo_block_end_datetime)
                             else:
-
                                 msg = (
                                     (f"Measurement key '{measurement_key} => {data_entry.to_s()}' already "
                                      "exists tallying uncorrelated cosmo measurements:"
                                      f"{cnv_hydro_measurements[measurement_key].to_s()}")
                                 )
-                                log.error(msg)
-                                # print(msg)
-
-                                # TODO: may not be valid given that we're keeping uncorrelated measurements
-                                # raise Exception((f"Measurement key {measurement_key} already "
-                                #      "exists tallying uncorrelated cosmo measurements"
-                                # ))
+                                log.warning(msg)
 
                         # add remaining cnv hydro measurements to cnv_hydro_measurements{}, and set the db destination
                         #cnv_hydro_measurements.update(cnv_hydrometric_block_measurements)
@@ -872,30 +884,19 @@ def collect_cosmo_and_cnvhydro_measurements(
                                 cnv_hydro_measurements[measurement_key] = data_entry
 
                                 cnv_hydrometric_measurement_count += 1
-
-                                print(
-                                    (f"\r\tCorrelations processed: {correlated_measurement_count}, "
-                                    f" CoSMo measurements: {cosmo_measurement_count}, "
-                                    f" CNV Hydrometric measurements: {cnv_hydrometric_measurement_count}. "
-                                    f"Processing interval: {cosmo_block_start_datetime} => {cosmo_block_end_datetime}"),
-                                    end='',
-                                    flush=True
-                                )
+                                print_meas_correl_status(correlated_measurement_count, cosmo_measurement_count,
+                                                         cnv_hydrometric_measurement_count,
+                                                         cosmo_block_start_datetime, cosmo_block_end_datetime)
                             else:
+                                # likely inevitable to see duplicates as the second dataset that we're windowing through
+                                # will overlap other windows with the correlation time buffer
                                 msg = (
                                     (f"Measurement key '{measurement_key} => {data_entry.to_s()}' already "
                                      "exists tallying uncorrelated cnv hydro measurements:"
                                      f"{cnv_hydro_measurements[measurement_key].to_s()}")
                                 )
 
-                                # TODO: examine changing log level here and above
-                                log.error(msg)
-                                # print(msg)
-
-                                # TODO: may not be valid given that we're keeping uncorrelated measurements
-                                # raise Exception((f"Measurement key {measurement_key} already "
-                                #      "exists tallying uncorrelated cnv hydro measurements"
-                                # ))
+                                log.warning(msg)
 
                         log.debug((
                             f"Ending scan of cosmo block {cosmo_block_start_datetime}"
@@ -1175,7 +1176,7 @@ def correlate_rainfall_intervals(prelim_measurements, cosmo_site, cnv_flowworks_
                                 log.debug((
                                     "Found trailing_rainfall_measurement: "
                                     f"{trailing_rainfall_measurement[0].strftime(MYSQL_DATE_FMT)}"
-                                    f"=> {pprint.pformat(trailing_rainfall_measurement)}"
+                                    f" => {pprint.pformat(trailing_rainfall_measurement)}"
                                 ))
 
                                 # trailing_rainfall_measurement[0]: measurement_timestamp
@@ -1699,6 +1700,7 @@ def collect_interval_data(db_config_filename, db_importer):
         log_msg = "Processing %s site completed" % cosmo_site
         print("%s" % log_msg)
         log.info(log_msg)
+        print("=============================================================================")
 
 
 ##############################################

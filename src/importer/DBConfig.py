@@ -5,3 +5,5 @@ class DBConfig(object):
     CONFIG_USER = "user"
     CONFIG_PASS = "pass"
     CONFIG_DBASE = "dbname"
+    CONFIG_DATASET_START = "dataset_start"
+    CONFIG_DATASET_END = "dataset_end"

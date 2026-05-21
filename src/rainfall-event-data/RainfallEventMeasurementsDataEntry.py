@@ -26,14 +26,14 @@ class RainfallEventMeasurementsDataEntry(DataEntry):
     CNV_FLOWWORKS_RAINFALL_AMOUNT_FIELD = "CNV_FLOWWORKS_RAINFALL_AMOUNT"
     CNV_AIR_TEMPERATURE_FIELD = "CNV_AIR_TEMPERATURE"
     COSMO_CONDUCTANCE_RESULT_FIELD = "COSMO_CONDUCTANCE_RESULT"
-    DNV_FLOWWORKS_FLOW_READING_FIELD = "DNV_WHITEWATER_FLOW_READING"
+    DNV_FLOWWORKS_FLOW_READING_FIELD = "DNV_FLOWWORKS_FLOW_READING"
     RAINFALL_EVENT_ID_FIELD = "RAINFALL_EVENT_ID"
 
     # row_obj is any structure that can be indexed and is iterable
     # csv, json, raw array
     def __init__(self, entry_obj):
 
-        # raise exception if theres a problem
+        # raise exception if there's a problem
         super().__init__(entry_obj)
 
         # monitoring location is the destination table name
@@ -71,13 +71,13 @@ class RainfallEventMeasurementsDataEntry(DataEntry):
             raise DataValidationException("Found invalid CONDUCTANCE_RESULT [%s]" %
                                           fields[RainfallEventMeasurementsDataEntry.COSMO_CONDUCTANCE_RESULT_FIELD])
 
-        # dnv whitewater flow reading. Can be none if there's no correlated measurement.
+        # dnv flowworks flow reading. Can be none if there's no correlated measurement.
         # Validity check on value if present
         # check that flow reading is not negative. stored as string
         if (fields[RainfallEventMeasurementsDataEntry.DNV_FLOWWORKS_FLOW_READING_FIELD] != '' and
                 fields[RainfallEventMeasurementsDataEntry.DNV_FLOWWORKS_FLOW_READING_FIELD] is not None and
                 float(fields[RainfallEventMeasurementsDataEntry.DNV_FLOWWORKS_FLOW_READING_FIELD]) < 0):
-            raise DataValidationException("Found invalid DNV_WHITEWATER_FLOW_READING_FIELD [%s]" %
+            raise DataValidationException("Found invalid DNV_FLOWWORKS_FLOW_READING_FIELD [%s]" %
                                           fields[RainfallEventMeasurementsDataEntry.DNV_FLOWWORKS_FLOW_READING_FIELD])
 
         # event id
