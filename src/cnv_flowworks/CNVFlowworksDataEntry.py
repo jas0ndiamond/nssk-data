@@ -86,7 +86,7 @@ class CNVFlowworksDataEntry(DataEntry):
         has_valid_rainfall_measurement = False
         ###################
         # rainfall amount - either this or hourly rainfall must be present and valid
-        if fields[HOURLY_RAINFALL_FIELD] != "":
+        if fields[RAINFALL_FIELD] != "":
             try:
                 value = float(fields[RAINFALL_FIELD])
             except Exception as e:
