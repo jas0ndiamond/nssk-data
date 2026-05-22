@@ -75,7 +75,7 @@ FAVICON_DIR = "./res/favicon/"
 ########################
 # rainfall interval data yearly stuff
 
-RAINFALL_INTERVAL_START_YEAR = 2020
+RAINFALL_INTERVAL_START_YEAR = 2018
 
 ########################
 # date format
