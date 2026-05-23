@@ -32,5 +32,6 @@ to a `duplicates_*.sql` file
   * `ResultValue`: "NSSK Supplied Actual"
   * `ResultComment`: "Preliminary QC and Specific Conductance by NSSK"
 * `Specific Conductivity` is dynamically calculated by formula `entry_specific_conductance = entry_conductivity / (1 + (0.02 * (entry_temperature - 25)))`
+* Measurements processed in Solinst dump files are integrated with the [CoSMo](../cosmo) dataset.
 * As the CoSMo dataset gets updated, our local CoSMo/Solist updates will register as duplicate measurements and fail database insertion.
   * This requires occasional clean CoSMo dataset imports.
