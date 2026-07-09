@@ -264,6 +264,8 @@ def main(parsed_args):
 
         field_names = reader.fieldnames
 
+        # TODO resolve each field_name with SOLINST_SCHEMA
+
         # schema
         logger.info("CSV file schema: %s" % field_names)
         logger.info("------------")
