@@ -220,6 +220,10 @@ def precheck(db_config_filename):
 
                     # TODO: check databases/tables exist. exception otherwise
                     # what if this is a botched install?
+
+                    # TODO: check row counts of each table? none should be empty
+                    # maybe defer to the individual imports
+
                     pass
 
             except Error as e:
