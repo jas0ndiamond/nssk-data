@@ -20,3 +20,8 @@
 * Multiple CoSMo measurements may map to the same rainfall measurement.
 * There are gaps in sensor readings, which will create gaps in correlation.
 * CoSMo sites WAGG01 and WAGG03 only for now.
+
+---
+## TODO
+* Enforce start of cnv_flowworks dataset consideration with start date override rather than trusting
+  * Reliable CNV Flowworks rainfall measurements begin at 2018-01-01

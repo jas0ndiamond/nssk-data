@@ -1,6 +1,6 @@
-# CNV Importer
+# CNV Hydrometric
 
-Imports data from CNV Hydrometric CSV data dumps into a MySQL database.
+Imports flow data from CNV Hydrometric CSV data dumps into a MySQL database.
 
 Data dumps retrieved manually from CNV.
 
@@ -16,15 +16,22 @@ Data dumps retrieved manually from CNV.
 
 `cd src/cnv_hydrometric`
 
+Manually:
+
 `../../venv/bin/python3 cnv-hydrometric-import.py -cfg ../../conf/cnv-hydrometric.json /path/to/nssk-data-dumps/WaggCreek_export_20250206133642.csv`
+
+Batch:
+
+`./run-all.sh -cfg ../../conf/cnv-hydrometric.json`
 
 ---
 ## Notes
+* Logs output to `cnv-hydrometric.log`
+* Only one site `WaggCreek`
+* The database will enforce uniqueness constraints. Inserts that fail uniqueness constraints will be dumped to a `duplicates_*.sql` file
+* Some preliminary measurements will be 0 or blank, but revised to coherent numbers in the "revised" stage field.
+* Runtimes can take ~15 minutes for 1 million inserts for a database on the local network.
 
-Logs output to `cnv-hydrometric.log`
-
-The database will enforce uniqueness constraints. Inserts that fail uniqueness constraints will be dumped to a `duplicates_*.sql` file
-
-Some preliminary measurements will be 0 or blank, but revised to coherent numbers in the "revised" stage field.
-
-Runtimes can take ~15 minutes for 1 million inserts for a database on the local network.
+---
+## TODO
+* Unhardcode data dump directory and file names in `run-all.sh`
