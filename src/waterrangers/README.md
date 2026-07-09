@@ -35,4 +35,4 @@ to a `duplicates_*.sql` file.
   * WAG-W-02a
   * WAG-W-02b
   * WAG-W-03
-* May be defunct: no measurements for 2026.
+* <b>May be defunct</b>: no measurements for 2026. Latest dump file collection is `waterrangers-dump-20251201-010116`.
