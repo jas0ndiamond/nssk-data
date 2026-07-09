@@ -35,3 +35,7 @@ to a `duplicates_*.sql` file
 * Measurements processed in Solinst dump files are integrated with the [CoSMo](../cosmo) dataset.
 * As the CoSMo dataset gets updated, our local CoSMo/Solist updates will register as duplicate measurements and fail database insertion.
   * This requires occasional clean CoSMo dataset imports.
+* There is some variability in the timestamp format.
+  * A Solinst dump file may have timestamps in either 12H or 24H format
+* There is some variability in the CSV header.
+  * "Time" vs "Time " and similar.
