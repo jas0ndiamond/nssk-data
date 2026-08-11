@@ -1,0 +1,25 @@
+# retrieve cosmo measurements. the cosmo dataset has different entries for each measurement type, so combine multiple measurements with matching
+# timestamps into one result row
+
+# aliases should match with schema fields in RainfallIntervalDataEntry
+
+# mysql "BETWEEN" is inclusive of both dates/datetimes- dont use so we dont complicate stepping through the blocks
+
+# either conductivity measurements or temperature water measurements can be missing but not both
+
+# must be sorted ASC
+
+SELECT
+	CAST(CONCAT_WS(' ', $DB.$COSMO_SITE.ActivityStartDate, $DB.$COSMO_SITE.ActivityStartTime) as DATETIME) as CosmoTimestamp,
+	MAX(CASE WHEN $DB.$COSMO_SITE.CharacteristicName = 'Conductivity' THEN $DB.$COSMO_SITE.ResultValue END) as Conductivity,
+  	MAX(CASE WHEN $DB.$COSMO_SITE.CharacteristicName = 'Temperature water' THEN $DB.$COSMO_SITE.ResultValue END) as TemperatureWater
+FROM $DB.$COSMO_SITE
+WHERE
+	CAST(CONCAT_WS(' ', $DB.$COSMO_SITE.ActivityStartDate, $DB.$COSMO_SITE.ActivityStartTime) as DATETIME) >= "$COSMO_START_DATETIME" AND
+    CAST(CONCAT_WS(' ', $DB.$COSMO_SITE.ActivityStartDate, $DB.$COSMO_SITE.ActivityStartTime) as DATETIME) < "$COSMO_END_DATETIME"
+GROUP BY
+  	CosmoTimestamp
+HAVING
+    Conductivity IS NOT NULL OR TemperatureWater IS NOT NULL
+ORDER BY
+  	CosmoTimestamp ASC;

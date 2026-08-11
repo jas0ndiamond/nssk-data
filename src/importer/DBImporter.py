@@ -1,4 +1,4 @@
-from mysql.connector import connect, Error, IntegrityError
+from mysql.connector import connect, Error, IntegrityError, DataError
 
 from datetime import datetime
 
@@ -66,7 +66,16 @@ class DBImporter:
 
         # check if a schema or schema mapping is defined
         if self.schema is None or len(self.schema) <= 0:
-            raise "Database schema must be defined"
+            raise Exception("Database schema must be defined for entry")
+
+        # where the entry will go in the database
+        entry_dest = entry.get_db_destination()
+
+        # require this here since we are assembling the mysql statement
+        # TODO: actually just buffer entry. execute function may be better invoker of the mysql statement assembly.
+        # maybe we decide on the schema and destination later on
+        if entry_dest is None:
+            raise Exception("Database destination table must be defined for entry")
 
         statement = "INSERT INTO"
 
@@ -124,13 +133,13 @@ class DBImporter:
         # entry fields
 
         # get the table to store the entry
-        table = entry.get_db_destination()
+        table = entry_dest
 
         statement += (" " + table + " " + fields_segment + values_segment)
 
         self.inserts.append(statement)
 
-        # TODO call execute if inserts grows to large
+        # TODO call execute or persist to disk or workspace db if inserts grows too large
 
     # dump our inserts. for debugging
     def dump(self):
@@ -170,63 +179,79 @@ class DBImporter:
                 config[DBConfig.CONFIG_USER] = None
                 config[DBConfig.CONFIG_PASS] = None
 
-                try:
-                    with connection.cursor() as cursor:
 
-                        insert_count = 0
+                with connection.cursor() as cursor:
 
-                        # print out an initial count of 0 otherwise it appears to hang
-                        print("\r\t%d / %d" % (insert_count, total_inserts), end='', flush=True)
+                    insert_count = 0
 
-                        # run inserts
-                        for insert in self.inserts:
+                    # print out an initial count of 0 otherwise it appears to hang
+                    print("\r\t%d / %d" % (insert_count, total_inserts), end='', flush=True)
 
-                            try:
-                                cursor.execute(insert)
+                    # run inserts
+                    for insert in self.inserts:
 
-                                # commit every COMMIT_SIZE inserts
-                                if insert_count % self.commit_size == 0:
-                                    connection.commit()
+                        try:
+                            cursor.execute(insert)
 
-                                insert_count += 1
+                            # commit every COMMIT_SIZE inserts
+                            if insert_count % self.commit_size == 0:
+                                connection.commit()
 
-                            except IntegrityError as e:
+                            insert_count += 1
 
-                                # print("error: %s " % e.args[1])
+                        except IntegrityError as e:
 
-                                # Arguments: (IntegrityError(1062, "1062 (23000): Duplicate entry
-                                # '2019-06-12-10:00:00-Temperature, water' for key 'WAGG01.PRIMARY'", '23000'),
-                                # )
-                                if " Duplicate entry " in e.args[1] and " for key " in e.args[1]:
+                            # print("error: %s " % e.args[1])
 
-                                    self.logger.warning(
-                                        "Attempted to insert duplicate row:\n%s\nContinuing..." % insert)
-                                    duplicate_count += 1
+                            # Arguments: (IntegrityError(1062, "1062 (23000): Duplicate entry
+                            # '2019-06-12-10:00:00-Temperature, water' for key 'WAGG01.PRIMARY'", '23000'),
+                            # )
+                            message = str(e.args[1])
 
-                                    duplicates.append(insert)
-                                else:
-                                    # problem but not a duplicate row
-                                    raise e
-                            except Error as e:
-                                self.logger.warning("Error running an insert:\n%s\nContinuing...\n" % insert)
+                            if " Duplicate entry " in message and " for key " in message:
+
+                                self.logger.warning(
+                                    "Attempted to insert duplicate row:\n%s\nmessage: %s\nContinuing..." % (insert, message))
+                                duplicate_count += 1
+
+                                duplicates.append(insert)
+                            else:
+                                # integrityerror but not a duplicate row
+                                self.logger.warning("IntegrityError running an insert:\n%s\nmessage: %s\nContinuing...\n" % (insert, message))
                                 self.logger.warning(e)
 
                                 errors.append(insert)
 
                                 error_count += 1
 
-                            print("\r\t%d / %d (%d duplicates, %d errors)" %
-                                  (insert_count, total_inserts, duplicate_count, error_count),
-                                  end='', flush=True)
+                        except DataError as e:
+                            self.logger.error(
+                                f"DataError running an insert:\n{insert}\nContinuing...")
+                            self.logger.error(e)
 
-                        # commit remaining inserts
-                        connection.commit()
+                            errors.append(insert)
 
-                except Error as e:
-                    self.logger.error("Error running inserts", e)
+                            error_count += 1
+                        except Error as e:
+                            self.logger.error(
+                                f"Error running an insert:\n{insert}\nContinuing...")
+                            self.logger.error(e)
+
+                            errors.append(insert)
+
+                            error_count += 1
+
+                        print("\r\t%d / %d (%d duplicates, %d errors)" %
+                              (insert_count, total_inserts, duplicate_count, error_count),
+                              end='', flush=True)
+
+                    # commit remaining inserts
+                    connection.commit()
+
 
         except Error as e:
-            self.logger.error("Error connecting to database", e)
+            self.logger.error(f"Error connecting to database:\n{e}")
+            raise e
 
         date_time = datetime.now()
 

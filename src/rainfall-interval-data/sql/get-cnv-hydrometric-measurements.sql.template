@@ -1,0 +1,11 @@
+# must be sorted ASC
+
+SELECT
+	$DB.$CNV_HYDROMETRIC_SITE.MeasurementTimeStamp as CNVHydrometricTimestamp,
+  	$DB.$CNV_HYDROMETRIC_SITE.RevisedFinalStage as RevisedFinalStage
+FROM $DB.$CNV_HYDROMETRIC_SITE
+WHERE
+    $DB.$CNV_HYDROMETRIC_SITE.MeasurementTimeStamp >= "$CNV_HYDROMETRIC_START_DATETIME" AND
+    $DB.$CNV_HYDROMETRIC_SITE.MeasurementTimeStamp < "$CNV_HYDROMETRIC_END_DATETIME"
+ORDER BY
+  	CNVHydrometricTimestamp ASC;

@@ -19,8 +19,8 @@ Imports data from CNV Flowworks CSV data dumps into a MySQL database
 ---
 ## Notes
 
-Logs output to `cnv-flowworks.log`
-
-The database will enforce uniqueness constraints. Inserts that fail uniqueness constraints will be dumped to a `duplicates_*.sql` file
-
-Runtimes can take ~15 minutes for 1 million inserts for a database on the local network.
+* Logs output to `cnv-flowworks.log`
+* The database will enforce uniqueness constraints. Inserts that fail uniqueness constraints will be dumped to a `duplicates_*.sql` file
+* Runtimes can take ~15 minutes for 1 million inserts for a database on the local network.
+* There are stretches in this dataset where some or all measurements are missing.
+  * Higher confidence measurements begin on 2018-01-01, though the dataset begins in 1994.

@@ -15,6 +15,7 @@ from src.importer.DBImporter import DBImporter
 from src.importer.DBConfig import DBConfig
 from src.importer.DBConfigFactory import DBConfigFactory
 from RainfallEventMeasurementsDataEntry import RainfallEventMeasurementsDataEntry
+from src.exception.PrecheckFailedException import PrecheckFailedException
 
 # compile rainfall event data for the cnv region
 
@@ -95,10 +96,8 @@ DNV_FLOWWORKS_DATA_WINDOW_TEMPLATE = Template(
 CNV_FLOWWORKS_TEMPLATE = Template(
     open("../rainfall-event-data/sql/get-cnv-data-for-rainfall-event.sql.template").read())
 
-# TODO dont read this every time
 COSMO_DATA_WINDOW_TEMPLATE = Template(
     open("../rainfall-event-data/sql/get-cosmo-data-for-rainfall-event.sql.template").read())
-
 
 ###############
 
@@ -133,8 +132,7 @@ def precheck(conf_file):
                     cursor.fetchall()
 
                     if cursor.rowcount != 1:
-                        # TODO: custom exception
-                        raise Exception("Could not find %s target database" % target_db)
+                        raise PrecheckFailedException("Could not find %s target database" % target_db)
                     else:
                         logger.debug("Found target database %s" % target_db)
 
@@ -144,8 +142,7 @@ def precheck(conf_file):
                     cursor.fetchall()
 
                     if cursor.rowcount != 1:
-                        # TODO: custom exception
-                        raise Exception("Could not find source database %s" % SOURCE_DB_NSSK_COSMO)
+                        raise PrecheckFailedException("Could not find source database %s" % SOURCE_DB_NSSK_COSMO)
                     else:
                         logger.debug("Found source database %s" % SOURCE_DB_NSSK_COSMO)
 
@@ -155,8 +152,7 @@ def precheck(conf_file):
                     cursor.fetchall()
 
                     if cursor.rowcount != 1:
-                        # TODO: custom exception
-                        raise Exception("Could not find source database %s" % SOURCE_DB_CNV_FLOWWORKS)
+                        raise PrecheckFailedException("Could not find source database %s" % SOURCE_DB_CNV_FLOWWORKS)
                     else:
                         logger.debug("Found source database %s" % SOURCE_DB_CNV_FLOWWORKS)
 
@@ -168,8 +164,7 @@ def precheck(conf_file):
                         cursor.execute("SHOW TABLES LIKE '%s';" % sensor)
                         cursor.fetchall()
                         if cursor.rowcount != 1:
-                            # TODO: custom exception
-                            raise Exception("Could not find sensor table %s in target database" % sensor)
+                            raise PrecheckFailedException("Could not find sensor table %s in target database" % sensor)
                         else:
                             logger.debug("Found Sensor Table %s" % sensor)
 
@@ -317,8 +312,12 @@ def correlate_with_cosmo_conductance(cnv_flowworks_rainfall_timestamp, search_sp
     best_measurement_value = None
 
     for row in search_space[sensor_site]:
-        # TODO empty and None checks for row
-
+        # handle any null conductivity measurements at row[1]. database table should require non-null ActivityStartDate
+        # and ActivityStartTime at row[0]
+        # Null conductivity measurements should be excluded by query
+        if row[1] is None or row[1] == "":
+            logger.warning(f"Skipping invalid conductivity measurement at {row[0]}:[{row[1]}]")
+            continue
         # determine best result
 
         # check if the timestamp in this row is better
@@ -369,7 +368,12 @@ def correlate_with_dnv_flow_reading(cnv_flowworks_rainfall_timestamp, search_spa
     closest_timestamp_distance = 999999
 
     for row in search_space[sensor_site]:
-        # TODO empty and None checks for row
+        # occasional null flow measurements at row[1]. database table should require non-null MeasurementTimestamp
+        # at row[0]
+        # Null flow measurements should be excluded by query
+        if row[1] is None or row[1] == "":
+            logger.warning(f"Skipping invalid flow measurement at {row[0]}:[{row[1]}]")
+            continue
 
         # determine best result
 

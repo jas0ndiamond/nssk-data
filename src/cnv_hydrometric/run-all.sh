@@ -13,3 +13,5 @@ fi
 ../../venv/bin/python3 ./cnv-hydrometric-import.py -cfg "$CONF_FILE" WaggCreek ~/opt/nssk-data-dumps/cnv-hydrometric/WaggCreek_export_20250206133300.csv
 ../../venv/bin/python3 ./cnv-hydrometric-import.py -cfg "$CONF_FILE" WaggCreek ~/opt/nssk-data-dumps/cnv-hydrometric/WaggCreek_export_20250206133551.csv
 ../../venv/bin/python3 ./cnv-hydrometric-import.py -cfg "$CONF_FILE" WaggCreek ~/opt/nssk-data-dumps/cnv-hydrometric/WaggCreek_export_20250206133642.csv
+
+../../venv/bin/python3 ./cnv-hydrometric-import.py -cfg "$CONF_FILE" WaggCreek ~/opt/nssk-data-dumps/cnv-hydrometric/Wagg_Creek_export_20250929162955.csv

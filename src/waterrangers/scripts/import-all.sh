@@ -35,20 +35,18 @@ SITES=(
   ["WAG-W-03"]="WAG-W-03.csv"
 )
 
-#../../venv/bin/python3 ./waterrangers-import.py -cfg "$CONF_FILE" WAG-E-01 ~/opt/nssk-data-dumps/waterrangers/WAG-E-01.csv
+#../../../venv/bin/python3 ./waterrangers-import.py -cfg "$CONF_FILE" WAG-E-01 ~/opt/nssk-data-dumps/waterrangers/WAG-E-01.csv
 
 for SITE in "${!SITES[@]}"; do
   DUMP_FILE="$DUMP_DIR/${SITES[$SITE]}"
   if [[ -f "$DUMP_FILE" ]]; then
     echo "Key: $SITE | File: $DUMP_FILE"
 
-    ../../venv/bin/python3 ./waterrangers-import.py -cfg "$CONF_FILE" "$SITE" "$DUMP_FILE"
+    # should be up one level
+    ../../../venv/bin/python3 ../waterrangers-import.py -cfg "$CONF_FILE" "$SITE" "$DUMP_FILE"
 
     echo "==============================="
   else
     echo "SITE: $SITE | File: $DUMP_FILE Not found"
   fi
 done
-
-
-#

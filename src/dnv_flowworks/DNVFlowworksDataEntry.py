@@ -33,6 +33,7 @@ class DNVFlowworksDataEntry(DataEntry):
         ##################
         # value buckets - some entries can be incomplete
         if self.get('value') == 'null':
+            # literal match of string "null"
 
             print ("Found a null %s" % self.entry_data)
 
